@@ -1,0 +1,298 @@
+// InstantTeacher - Prisma Schema
+// PostgreSQL. For local dev without Docker: use a free DB at https://neon.tech
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ AUTH (Auth.js / NextAuth) ============
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?   @db.Text
+  access_token      String?   @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?   @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionToken])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ============ CORE ============
+enum Role {
+  PARENT
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email        String?   @unique
+  emailVerified DateTime?
+  passwordHash  String?   // for credentials provider
+  role         Role
+  image        String?
+  name         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  banned       Boolean   @default(false)
+  bannedAt     DateTime?
+  bannedReason String?   @db.Text
+
+  accounts         Account[]
+  sessions         Session[]
+  parentProfile    ParentProfile?
+  studentProfile   StudentProfile?
+  teacherProfile   TeacherProfile?
+  adminCreatedShifts Shift[]         @relation("ShiftCreatedBy")
+  disputesRaised   Dispute[]         @relation("DisputeRaisedBy")
+  sessionsAsTeacher TutoringSession[] @relation("SessionTeacher")
+  sessionsRequested TutoringSession[] @relation("SessionRequestedBy")
+}
+
+// ============ PARENT ============
+model ParentProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  fullName       String
+  mobile         String
+  suburb         String   // Perth metro targeting
+  emergencyContact String?
+  stripeCustomerId String? @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students StudentProfile[]
+}
+
+// ============ STUDENT ============
+model StudentProfile {
+  id           String   @id @default(cuid())
+  parentId     String
+  userId       String?  @unique // optional: student can have own account (Year 10-12)
+  fullName     String
+  schoolYear   Int      // 3-12
+  schoolName   String   // required for conflict-of-interest
+  timezone     String   @default("Australia/Perth")
+  subjects     String[] // Maths, English, Science, etc.
+  guardianConsent Boolean? // if under 18 and self-registered
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  parent   ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  user     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessions TutoringSession[] @relation("SessionStudent")
+}
+
+// ============ TEACHER ============
+enum TeacherType {
+  STUDENT_TEACHER
+  PROFESSIONAL_TEACHER
+}
+
+// Application status: admin verifies WWCC + Teacher Registration (TRB) then approves
+enum TeacherApplicationStatus {
+  PENDING    // submitted, awaiting admin verification
+  APPROVED   // WWCC + TRB verified, can be rostered and take sessions
+  REJECTED   // admin rejected (with optional reason)
+}
+
+model TeacherProfile {
+  id                    String       @id @default(cuid())
+  userId                String       @unique
+  fullName              String
+  mobile                String
+  teacherType           TeacherType
+  university            String?      // if student teacher
+  teachingRegistration  String?      @db.Text // legacy / notes
+  schoolName            String?      // if currently employed at a school
+  blockedSchools        String[]     // conflict-of-interest: never match these
+  subjects              String[]     // subjects they can teach
+  yearLevels            Int[]        // year levels 3-12
+  wwccNumber            String?
+  wwccExpiry            DateTime?
+  wwccVerified         Boolean      @default(false)
+  wwccVerifiedAt       DateTime?    // when admin confirmed WWCC
+  wwccVerifiedByAdminId String?     // admin who verified
+  teacherRegistrationNumber String?  // TRB / Register of Teachers number (WA)
+  teacherRegistrationExpiry DateTime?
+  teacherRegVerified    Boolean     @default(false)
+  teacherRegVerifiedAt  DateTime?
+  teacherRegVerifiedByAdminId String?
+  applicationStatus     TeacherApplicationStatus @default(PENDING)
+  applicationRejectedAt DateTime?
+  applicationRejectedReason String? @db.Text
+  identityVerified      Boolean      @default(false)
+  stripeConnectAccountId String?     @unique
+  stripeOnboardingComplete Boolean   @default(false)
+  ratingAvg             Float?      @default(0)
+  totalSessions         Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shifts  TeacherShift[]
+}
+
+// ============ SHIFTS (ROSTER) ============
+model Shift {
+  id                  String   @id @default(cuid())
+  startAt             DateTime
+  endAt               DateTime
+  requiredTeacherCount Int     @default(1)
+  subjectFocus        String[]
+  yearFocus          Int[]    // year levels 3-12
+  createdByAdminId   String
+  createdAt           DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  createdBy   User          @relation("ShiftCreatedBy", fields: [createdByAdminId], references: [id], onDelete: Cascade)
+  teacherShifts TeacherShift[]
+}
+
+enum TeacherShiftStatus {
+  ASSIGNED
+  ACCEPTED
+  CHECKED_IN
+  NO_SHOW
+  COMPLETED
+}
+
+model TeacherShift {
+  id        String   @id @default(cuid())
+  teacherId String
+  shiftId   String
+  status    TeacherShiftStatus @default(ASSIGNED)
+  checkedInAt DateTime?
+  checkedOutAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  shift   Shift          @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, shiftId])
+  @@index([shiftId])
+  @@index([teacherId])
+}
+
+// ============ SESSIONS ============
+enum SessionStatus {
+  REQUESTED
+  MATCHED
+  PAYMENT_PENDING
+  PAID
+  ROOM_CREATED
+  STUDENT_WAITING
+  TEACHER_JOINED
+  IN_PROGRESS
+  ENDED
+  CANCELLED
+  REFUNDED
+  DISPUTED
+}
+
+model TutoringSession {
+  id                   String        @id @default(cuid())
+  studentId            String        // StudentProfile id
+  teacherId            String?       // User id (teacher) — null until teacher accepts
+  requestedByUserId    String        // User id (parent who paid)
+  subject              String
+  yearLevel            Int
+  durationMinutes      Int           // 15, 30, 60
+  helpType             String        // One question, Concept, Homework review, Exam prep, Essay feedback
+  studentPrompt        String?       @db.Text
+  pricePaid            Int           // cents
+  platformFee          Int           // cents (25%)
+  teacherPayout        Int           // cents (75%)
+  status               SessionStatus @default(REQUESTED)
+  requestedAt          DateTime      @default(now())
+  matchedAt            DateTime?
+  startedAt            DateTime?
+  endedAt              DateTime?
+  stripePaymentIntentId String?       @unique
+  stripeRefundId       String?
+  videoRoomId          String?
+  videoRoomSid         String?       // Twilio room Sid
+  rating               Int?          // 1-5
+  feedbackText         String?      @db.Text
+  teacherNotes         String?      @db.Text
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  student     StudentProfile @relation("SessionStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher     User?          @relation("SessionTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+  requestedBy User           @relation("SessionRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  files       UploadedFile[]
+  disputes    Dispute[]
+}
+
+// ============ UPLOADS ============
+model UploadedFile {
+  id        String   @id @default(cuid())
+  sessionId String
+  url       String   @db.Text
+  type      String   // image, pdf, etc.
+  createdAt DateTime @default(now())
+
+  session TutoringSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+// ============ DISPUTES ============
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REFUNDED
+}
+
+model Dispute {
+  id              String       @id @default(cuid())
+  sessionId       String
+  raisedByUserId  String
+  reason          String       @db.Text
+  status          DisputeStatus @default(OPEN)
+  resolutionNotes String?      @db.Text
+  refundAmount    Int?         // cents
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  session    TutoringSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  raisedBy   User    @relation("DisputeRaisedBy", fields: [raisedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([raisedByUserId])
+}

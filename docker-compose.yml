@@ -1,0 +1,17 @@
+# Local PostgreSQL for InstantTeacher (Option B: admin login)
+# Run: docker compose up -d   then: npx prisma db push && npm run db:seed
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: instantteacher
+    ports:
+      - "5432:5432"
+    volumes:
+      - instantteacher-pgdata:/var/lib/postgresql/data
+
+volumes:
+  instantteacher-pgdata:
+    driver: local
