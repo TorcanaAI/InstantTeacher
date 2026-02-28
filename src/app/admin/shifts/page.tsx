@@ -1,10 +1,19 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DeleteShiftButton } from "./delete-shift-button";
 
 export default async function AdminShiftsPage() {
+  const session = await auth();
+  if (!session?.user || (session.user as { role?: Role }).role !== Role.ADMIN) {
+    redirect("/auth/login");
+  }
+
   const shifts = await prisma.shift.findMany({
     orderBy: { startAt: "desc" },
     take: 50,
@@ -32,6 +41,7 @@ export default async function AdminShiftsPage() {
                 <th className="p-3 text-left font-medium">Required</th>
                 <th className="p-3 text-left font-medium">Teachers</th>
                 <th className="p-3 text-left font-medium">Created by</th>
+                <th className="p-3 text-left font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -53,6 +63,9 @@ export default async function AdminShiftsPage() {
                     ))}
                   </td>
                   <td className="p-3">{s.createdBy.name ?? "—"}</td>
+                  <td className="p-3">
+                    <DeleteShiftButton shiftId={s.id} />
+                  </td>
                 </tr>
               ))}
             </tbody>

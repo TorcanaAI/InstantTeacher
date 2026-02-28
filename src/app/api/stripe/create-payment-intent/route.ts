@@ -16,7 +16,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { sessionId } = (await req.json()) as { sessionId: string };
+    const body = (await req.json()) as { sessionId: string; allowsIncrementalCharges?: boolean };
+    const { sessionId, allowsIncrementalCharges } = body;
     if (!sessionId) {
       return NextResponse.json({ error: "sessionId required" }, { status: 400 });
     }
@@ -51,14 +52,19 @@ export async function POST(req: Request) {
     });
     const customerId = parent?.stripeCustomerId;
 
+    // Get consent from request body (default to false for safety)
+    const consentGiven = allowsIncrementalCharges === true;
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: t.pricePaid,
       currency: "aud",
       customer: customerId ?? undefined,
+      setup_future_usage: consentGiven ? "off_session" : undefined, // Save payment method if consent given
       metadata: {
         tutoringSessionId: t.id,
         studentId: t.studentId,
         requestedByUserId: t.requestedByUserId,
+        allowsIncrementalCharges: String(consentGiven),
       },
       automatic_payment_methods: { enabled: true },
     });
@@ -68,6 +74,7 @@ export async function POST(req: Request) {
       data: {
         status: "PAYMENT_PENDING",
         stripePaymentIntentId: paymentIntent.id,
+        allowsIncrementalCharges: consentGiven,
       },
     });
 

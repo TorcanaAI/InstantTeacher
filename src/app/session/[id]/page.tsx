@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { Button } from "@/components/ui/button";
 import SessionRoom from "./session-room";
 
 export default async function SessionRoomPage({
@@ -37,6 +39,11 @@ export default async function SessionRoomPage({
 
   return (
     <div className="min-h-screen bg-slate-900">
+      <div className="flex items-center justify-end gap-2 border-b border-slate-700 bg-slate-800 px-4 py-2">
+        <Button asChild size="sm" variant="secondary">
+          <Link href={`/session/${sessionId}/video?role=${role}`}>Join video call</Link>
+        </Button>
+      </div>
       <SessionRoom
         sessionId={sessionId}
         role={role}

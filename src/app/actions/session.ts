@@ -6,7 +6,10 @@ import { Role } from "@prisma/client";
 import {
   SESSION_DURATIONS,
   PLATFORM_FEE_PERCENT,
+  SECTION_TYPES,
+  SUBJECTS,
 } from "@/lib/constants";
+import type { SectionType } from "@/lib/constants";
 import type { SessionStatus } from "@prisma/client";
 
 export async function requestSession(formData: FormData) {
@@ -15,15 +18,26 @@ export async function requestSession(formData: FormData) {
     return { error: "Unauthorized" };
   }
 
-  const studentId = formData.get("studentId") as string;
-  const subject = formData.get("subject") as string;
-  const yearLevel = parseInt(formData.get("yearLevel") as string, 10);
-  const durationMinutes = parseInt(formData.get("durationMinutes") as string, 10);
-  const helpType = formData.get("helpType") as string;
-  const studentPrompt = (formData.get("studentPrompt") as string) || null;
+  const studentId = (formData.get("studentId") as string)?.trim();
+  const subject = (formData.get("subject") as string)?.trim();
+  const sectionRaw = (formData.get("section") as string)?.trim() || "NAPLAN";
+  const section: SectionType = SECTION_TYPES.includes(sectionRaw as SectionType) ? (sectionRaw as SectionType) : "NAPLAN";
+  const yearLevel = parseInt(String(formData.get("yearLevel") ?? ""), 10);
+  const durationMinutes = parseInt(String(formData.get("durationMinutes") ?? ""), 10);
+  const helpType = (formData.get("helpType") as string)?.trim();
+  const studentPrompt = (formData.get("studentPrompt") as string)?.trim() || null;
 
-  if (!studentId || !subject || !yearLevel || !durationMinutes || !helpType) {
-    return { error: "Missing required fields" };
+  const missing: string[] = [];
+  if (!studentId) missing.push("student");
+  if (!subject) missing.push("subject");
+  if (!Number.isFinite(yearLevel) || yearLevel < 3 || yearLevel > 12) missing.push("year level");
+  if (!Number.isFinite(durationMinutes)) missing.push("session length");
+  if (!helpType) missing.push("help type");
+  if (missing.length > 0) {
+    return { error: `Please fill in: ${missing.join(", ")}.` };
+  }
+  if (!SUBJECTS.includes(subject as (typeof SUBJECTS)[number])) {
+    return { error: "Invalid subject" };
   }
 
   const durationConfig = SESSION_DURATIONS.find((d) => d.minutes === durationMinutes);
@@ -49,6 +63,7 @@ export async function requestSession(formData: FormData) {
       studentId: student.id,
       requestedByUserId: session.user.id,
       subject,
+      section,
       yearLevel,
       durationMinutes,
       helpType,

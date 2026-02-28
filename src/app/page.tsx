@@ -1,9 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SUBJECTS } from "@/lib/constants";
 import { BookOpen, Shield, Clock, Star } from "lucide-react";
 import SubjectSection from "./subject-section";
 
@@ -15,11 +13,8 @@ export default async function HomePage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-teal-100 bg-white/95 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold text-[hsl(var(--hero-teal))]">
-              InstantTeacher
-            </span>
-            <Image src="/eucalyptus.svg" alt="" width={24} height={24} className="h-6 w-6 text-[hsl(var(--hero-teal))]" aria-hidden />
+          <Link href="/" className="text-xl font-bold text-[hsl(var(--hero-teal))]">
+            InstantTeacher
           </Link>
           <nav className="hidden items-center gap-6 sm:flex">
             <Link
@@ -54,9 +49,18 @@ export default async function HomePage() {
               </Button>
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login">Log in</Link>
-                </Button>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-slate-600 transition hover:text-[hsl(var(--hero-teal))]"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/auth/login"
+                  className="text-sm font-medium text-slate-500 transition hover:text-slate-700"
+                >
+                  Admin
+                </Link>
                 <Button size="sm" className="rounded-full bg-[hsl(var(--hero-teal))] hover:bg-[hsl(var(--hero-teal))]/90" asChild>
                   <Link href="/signup">Get help now</Link>
                 </Button>
@@ -110,16 +114,16 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Get help with — subject cards with modal */}
+      {/* Get help with homework, projects or study — 4 subjects + NAPLAN + ATAR */}
       <section className="border-t border-slate-100 bg-slate-50/50 py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-center text-2xl font-bold text-slate-900 md:text-3xl">
-            Get help with
+            Get help with homework, projects or study
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-center text-slate-600">
             Choose a subject — we&apos;ll match you with a qualified teacher in minutes.
           </p>
-          <SubjectSection subjects={[...SUBJECTS]} isLoggedIn={!!session} />
+          <SubjectSection />
         </div>
       </section>
 

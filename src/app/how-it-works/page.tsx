@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
 export default function HowItWorksPage() {
   return (
     <div className="min-h-screen bg-white">
@@ -11,6 +10,8 @@ export default function HowItWorksPage() {
           </Link>
           <nav className="flex items-center gap-4">
             <Link href="/" className="text-sm font-medium text-slate-600 hover:text-[hsl(var(--hero-teal))]">Home</Link>
+            <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-[hsl(var(--hero-teal))]">Sign in</Link>
+            <Link href="/auth/login" className="text-sm font-medium text-slate-500 hover:text-slate-700">Admin</Link>
             <Button asChild size="sm" className="rounded-full bg-[hsl(var(--hero-teal))] hover:bg-[hsl(var(--hero-teal))]/90">
               <Link href="/signup">Get help now</Link>
             </Button>

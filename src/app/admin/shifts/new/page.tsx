@@ -73,7 +73,7 @@ export default function AdminNewShiftPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="subjectFocus">Subjects (comma-separated)</Label>
-              <Input id="subjectFocus" name="subjectFocus" placeholder="Maths, English" />
+              <Input id="subjectFocus" name="subjectFocus" placeholder="English, Mathematics, HASS, Science" />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>

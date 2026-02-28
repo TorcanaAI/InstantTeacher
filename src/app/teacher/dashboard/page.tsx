@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import IncomingRequests from "./incoming-requests";
 import { RosterCard } from "./roster-card";
+import SignOutButton from "@/components/SignOutButton";
 
 export default async function TeacherDashboardPage() {
   const session = await auth();
@@ -65,11 +66,7 @@ export default async function TeacherDashboardPage() {
             <Link href="/teacher/shifts" className="text-sm text-slate-600 hover:text-slate-900">
               My shifts
             </Link>
-            <form action="/api/auth/signout" method="POST">
-              <Button type="submit" variant="ghost" size="sm">
-                Sign out
-              </Button>
-            </form>
+            <SignOutButton variant="ghost" size="sm" callbackUrl="/" />
           </nav>
         </div>
       </header>
@@ -116,9 +113,14 @@ export default async function TeacherDashboardPage() {
                         {s.subject} · Year {s.yearLevel} · {s.durationMinutes} min
                       </p>
                     </div>
-                    <Button asChild size="sm">
-                      <Link href={`/session/${s.id}`}>Join</Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button asChild size="sm">
+                        <Link href={`/session/${s.id}`}>Join</Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/session/${s.id}/video?role=teacher`}>Join video call</Link>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

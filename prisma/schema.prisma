@@ -78,6 +78,8 @@ model User {
   disputesRaised   Dispute[]         @relation("DisputeRaisedBy")
   sessionsAsTeacher TutoringSession[] @relation("SessionTeacher")
   sessionsRequested TutoringSession[] @relation("SessionRequestedBy")
+  sunshineQuestionBlocksRequested SunshineQuestionBlock[] @relation("SunshineBlockRequestedBy")
+  sunshineReadingSessionsRequested SunshineReadingSession[] @relation("SunshineReadingRequestedBy")
 }
 
 // ============ PARENT ============
@@ -113,6 +115,9 @@ model StudentProfile {
   parent   ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
   user     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   sessions TutoringSession[] @relation("SessionStudent")
+  sunshineQuestionBlocks SunshineQuestionBlock[]
+  sunshineQuestionUses   SunshineQuestionUse[]
+  sunshineReadingSessions SunshineReadingSession[]
 }
 
 // ============ TEACHER ============
@@ -228,7 +233,8 @@ model TutoringSession {
   studentId            String        // StudentProfile id
   teacherId            String?       // User id (teacher) — null until teacher accepts
   requestedByUserId    String        // User id (parent who paid)
-  subject              String
+  subject              String        // English, Mathematics, HASS, Science
+  section              String        @default("NAPLAN") // NAPLAN or ATAR (selected tab on Get Help With page)
   yearLevel            Int
   durationMinutes      Int           // 15, 30, 60
   helpType             String        // One question, Concept, Homework review, Exam prep, Essay feedback
@@ -242,9 +248,15 @@ model TutoringSession {
   startedAt            DateTime?
   endedAt              DateTime?
   stripePaymentIntentId String?       @unique
+  stripePaymentMethodId String?       // Saved payment method for incremental charges
   stripeRefundId       String?
+  allowsIncrementalCharges Boolean   @default(false) // Parent consent for session extensions
+  totalExtendedMinutes  Int           @default(0) // Total minutes extended (capped at 60)
   videoRoomId          String?
-  videoRoomSid         String?       // Twilio room Sid
+  videoRoomSid         String?       // Twilio room Sid (legacy)
+  dailyRoomName        String?       // Daily.co room name
+  dailyRoomUrl         String?       // Daily.co room URL (Prebuilt)
+  videoProvider        String?       @default("DAILY") // DAILY | TWILIO
   rating               Int?          // 1-5
   feedbackText         String?      @db.Text
   teacherNotes         String?      @db.Text
@@ -256,6 +268,7 @@ model TutoringSession {
   requestedBy User           @relation("SessionRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
   files       UploadedFile[]
   disputes    Dispute[]
+  extensions  SessionExtension[]
 }
 
 // ============ UPLOADS ============
@@ -295,4 +308,113 @@ model Dispute {
 
   @@index([sessionId])
   @@index([raisedByUserId])
+}
+
+// ============ SESSION EXTENSIONS ============
+enum ExtensionPaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model SessionExtension {
+  id                   String                 @id @default(cuid())
+  sessionId            String
+  extensionMinutes     Int                    // 10, 15, or 30
+  priceCents           Int                    // Amount charged (cents)
+  platformFee          Int                    // Platform fee (cents)
+  teacherPayout        Int                    // Teacher payout (cents)
+  stripePaymentIntentId String                @unique
+  status               ExtensionPaymentStatus @default(PENDING)
+  extendedAt           DateTime               @default(now())
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  session TutoringSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([stripePaymentIntentId])
+}
+
+// ============ INSTANT SUNSHINE CHILD ============
+model SunshineQuestionBlock {
+  id                    String   @id @default(cuid())
+  studentId             String
+  requestedByUserId     String
+  stripePaymentIntentId String   @unique
+  questionsTotal        Int      @default(5)
+  questionsRemaining    Int      @default(5)
+  amountCents            Int      @default(500)
+  createdAt              DateTime @default(now())
+
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  requestedBy User           @relation("SunshineBlockRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  uses        SunshineQuestionUse[]
+
+  @@index([studentId])
+  @@index([requestedByUserId])
+}
+
+model SunshineQuestionUse {
+  id        String   @id @default(cuid())
+  blockId   String
+  studentId String
+  subject   String
+  usedAt    DateTime @default(now())
+
+  block   SunshineQuestionBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  student StudentProfile        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([blockId])
+}
+
+// ============ SUNSHINE READING LIBRARY ============
+model ReadingBook {
+  id          String   @id @default(cuid())
+  title       String
+  yearLevel   Int      // 1–5
+  contentText String   @db.Text
+  pdfUrl      String?  // Optional URL to view PDF (external link or /api/admin/books/[id]/pdf when stored)
+  pdfBytes    Bytes?   // Optional: admin-uploaded PDF stored in DB (served at /api/admin/books/[id]/pdf)
+  createdAt   DateTime @default(now())
+
+  readingSessions SunshineReadingSession[]
+}
+
+enum SunshineReadingStatus {
+  PENDING_PAYMENT
+  PAID
+  IN_PROGRESS
+  COMPLETED
+}
+
+model SunshineReadingSession {
+  id                    String                @id @default(cuid())
+  studentId             String
+  requestedByUserId     String
+  readingBookId         String?               // Book from Reading Library
+  stripePaymentIntentId String?               @unique
+  status                SunshineReadingStatus @default(PENDING_PAYMENT)
+  amountCents           Int                   @default(1000)
+  createdAt             DateTime              @default(now())
+  completedAt           DateTime?
+
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  requestedBy User           @relation("SunshineReadingRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  readingBook ReadingBook?   @relation(fields: [readingBookId], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([requestedByUserId])
+  @@index([status])
+  @@index([readingBookId])
+}
+
+// ============ VIDEO TEST (admin-only) ============
+model VideoTestSession {
+  id        String   @id @default(cuid())
+  title     String
+  roomUrl   String   @db.Text
+  createdAt DateTime @default(now())
 }

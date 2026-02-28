@@ -65,6 +65,7 @@ export async function GET() {
       requests: filtered.map((r) => ({
         id: r.id,
         subject: r.subject,
+        section: r.section,
         yearLevel: r.yearLevel,
         durationMinutes: r.durationMinutes,
         studentPrompt: r.studentPrompt,

@@ -24,7 +24,7 @@ export default function SessionRoom({ sessionId, role, durationMinutes, studentN
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(durationMinutes * 60);
   const [started, setStarted] = useState(false);
-  const [remoteParticipantCount, setRemoteParticipantCount] = useState(0);
+  const [, setRemoteParticipantCount] = useState(0);
   const roomRef = useRef<unknown>(null);
 
   useEffect(() => {
@@ -117,7 +117,7 @@ export default function SessionRoom({ sessionId, role, durationMinutes, studentN
   }, [sessionId, role, waitingForTeacher]);
 
   useEffect(() => {
-    if (!started || status !== "connected") return;
+    if (!started || status !== "call_connected") return;
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 0) {

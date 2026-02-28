@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -23,25 +23,44 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Show error from URL (e.g. after NextAuth redirects back on failure)
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err === "CredentialsSignin" || err === "Callback") {
+      setError("Invalid email or password. Check your details or sign up if you don't have an account yet.");
+    } else if (err === "Configuration") {
+      setError("Server configuration issue. If you're the site owner, set AUTH_SECRET and NEXTAUTH_URL in Vercel → Settings → Environment Variables.");
+    }
+  }, [searchParams]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
       const res = await signIn("credentials", {
-        email,
+        email: email.trim().toLowerCase(),
         password,
         redirect: false,
         callbackUrl,
       });
-      if (res?.error) {
+      if (res?.error || res?.ok === false) {
         setError("Invalid email or password. Check your details or sign up if you don't have an account yet.");
         setLoading(false);
         return;
       }
-      window.location.href = callbackUrl;
+      // Success: use URL from response or callbackUrl; full-page navigation so the session cookie is sent
+      const targetUrl =
+        (res && "url" in res && typeof (res as { url?: string }).url === "string" && (res as { url: string }).url)
+          ? (res as { url: string }).url
+          : callbackUrl;
+      const fullUrl = targetUrl.startsWith("http") ? targetUrl : `${window.location.origin}${targetUrl}`;
+      // Brief delay so the session cookie is committed before navigation
+      await new Promise((r) => setTimeout(r, 200));
+      window.location.href = fullUrl;
     } catch {
-      setError("Something went wrong.");
+      setError("Something went wrong. Please try again.");
+    } finally {
       setLoading(false);
     }
   }
@@ -53,9 +72,14 @@ function LoginForm() {
           <Link href="/" className="text-lg font-bold text-[hsl(var(--hero-teal))]">
             InstantTeacher
           </Link>
-          <Link href="/signup" className="text-sm font-medium text-slate-600 hover:text-[hsl(var(--hero-teal))]">
-            Sign up
-          </Link>
+          <nav className="flex items-center gap-4">
+            <Link href="/signup" className="text-sm font-medium text-slate-600 hover:text-[hsl(var(--hero-teal))]">
+              Sign up
+            </Link>
+            <Link href="/auth/login" className="text-sm font-medium text-slate-500 hover:text-slate-700">
+              Admin
+            </Link>
+          </nav>
         </div>
       </header>
       <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-12">
@@ -112,8 +136,14 @@ function LoginForm() {
                 Sign up
               </Link>
             </p>
-            <p className="mt-2 text-center text-xs text-slate-500">
-              Admin? <Link href="/setup" className="font-medium text-[hsl(var(--hero-teal))] underline">Set up admin login</Link> (free DB + seed). Default admin: jkritzinger92@gmail.com (see docs/VERCEL-SETUP.md or docs/NEON-SETUP.md).
+            <p className="mt-3 text-center text-sm text-slate-500">
+              <Link href="/login?callbackUrl=/admin" className="font-medium text-[hsl(var(--hero-teal))] underline hover:no-underline">
+                Log in as admin
+              </Link>
+              {" · "}
+              <Link href="/setup" className="font-medium text-[hsl(var(--hero-teal))] underline hover:no-underline">
+                Having trouble?
+              </Link>
             </p>
           </CardContent>
         </Card>

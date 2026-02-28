@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Providers } from "./providers";
+import SupportFooter from "@/components/SupportFooter";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -35,9 +36,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased min-h-screen flex flex-col`}
       >
-        <Providers>{children}</Providers>
+        <div className="min-h-screen flex flex-col">
+          <Providers>
+            <main className="flex-1">{children}</main>
+          </Providers>
+          <SupportFooter />
+        </div>
       </body>
     </html>
   );

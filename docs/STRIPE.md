@@ -6,11 +6,27 @@ Implement Stripe payments for session purchases with clean tracking: checkout, w
 
 ## Environment variables
 
-Add to `.env`:
+Add to `.env` (local) and to **Vercel → Settings → Environment Variables** (production):
 
-- `STRIPE_SECRET_KEY` — Stripe secret key (test: `sk_test_...`)
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — Publishable key (test: `pk_test_...`)
+- `STRIPE_SECRET_KEY` — Stripe secret key (test: `sk_test_...`, live: `sk_live_...`)
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — Publishable key (test: `pk_test_...`, live: `pk_live_...`)
 - `STRIPE_WEBHOOK_SECRET` — Webhook signing secret (`whsec_...`) from Stripe Dashboard → Webhooks
+
+### Adding Stripe keys in Vercel (fix “Payments are not configured”)
+
+1. Go to **https://vercel.com** → your project → **Settings** → **Environment Variables**.
+2. Click **Add New**.
+3. **Key:** `STRIPE_SECRET_KEY`  
+   **Value:** your Stripe secret key from [Stripe Dashboard → Developers → API keys](https://dashboard.stripe.com/apikeys) (use **Secret key**; for production use **Live** keys).  
+   **Environments:** Production (and Preview if you want).
+4. Click **Save**.
+5. Click **Add New** again.
+6. **Key:** `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`  
+   **Value:** your Stripe publishable key from the same page (use **Publishable key**).  
+   **Environments:** Production (and Preview if you want).
+7. Click **Save**.
+8. (Recommended) Add **`STRIPE_WEBHOOK_SECRET`** with the signing secret from Stripe Dashboard → Webhooks → your endpoint (e.g. `https://instant-teacher.vercel.app/api/stripe/webhook`).
+9. Go to **Deployments** → **⋯** on the latest → **Redeploy** so the new variables are used.
 
 ## Setup (test mode)
 

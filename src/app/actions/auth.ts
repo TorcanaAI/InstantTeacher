@@ -3,8 +3,7 @@
 import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { stringifyArray } from "@/lib/db-json";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 import { z } from "zod";
 

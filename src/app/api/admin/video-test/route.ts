@@ -1,42 +1,50 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { Role } from "@prisma/client";
-import { createRoom, getAccessToken } from "@/lib/twilio";
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/adminGuard";
+import { createDailyRoom, isDailyConfigured } from "@/lib/daily";
 
-/**
- * GET /api/admin/video-test?action=create|token&roomName=...&role=teacher|student
- * Admin-only: create a test room or get a token to join as teacher/student.
- */
-export async function GET(req: Request) {
+export const dynamic = "force-dynamic";
+
+/** GET: list all video test sessions (admin only). */
+export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user || session.user.role !== Role.ADMIN) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    await requireAdmin();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    const { searchParams } = new URL(req.url);
-    const action = searchParams.get("action");
-    const roomName = searchParams.get("roomName");
-    const role = searchParams.get("role");
+  const sessions = await prisma.videoTestSession.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  return NextResponse.json(sessions);
+}
 
-    if (action === "create") {
-      const name = `test-${Date.now()}`;
-      await createRoom(name);
-      return NextResponse.json({ roomName: name });
-    }
+/** POST: create a test session with a Daily room (admin only). */
+export async function POST(req: Request) {
+  try {
+    await requireAdmin();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    if (action === "token" && roomName && (role === "teacher" || role === "student")) {
-      const identity = `${role}-test-${Date.now()}`;
-      const token = getAccessToken(identity, roomName);
-      return NextResponse.json({ token, roomName });
-    }
-
-    return NextResponse.json({ error: "Invalid action or params" }, { status: 400 });
-  } catch (err) {
-    console.error("Admin video-test error:", err);
+  if (!isDailyConfigured()) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Video test failed" },
-      { status: 500 }
+      { error: "Daily credentials not configured. Add DAILY_API_KEY and DAILY_DOMAIN." },
+      { status: 503 }
     );
+  }
+
+  try {
+    const room = await createDailyRoom();
+    const { title } = await req.json().catch(() => ({}));
+    const name = typeof title === "string" && title.trim() ? title.trim() : `Test ${new Date().toISOString()}`;
+    const session = await prisma.videoTestSession.create({
+      data: { title: name, roomUrl: room.url },
+    });
+    return NextResponse.json(session);
+  } catch (err) {
+    console.error("Admin video-test POST error:", err);
+    const message = err instanceof Error ? err.message : "Failed to create test session";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

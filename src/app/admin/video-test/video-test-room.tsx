@@ -47,7 +47,8 @@ export function VideoTestRoom({
             }
           });
         }
-        room.on("participantConnected", (participant: { trackPublications?: Map<string, { track?: { attach?: (el: HTMLElement) => void } }> }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (room as any).on("participantConnected", (participant: { trackPublications?: Map<string, { track?: { attach?: (el: HTMLElement) => void } }> }) => {
           if (participant.trackPublications && remoteRef.current) {
             participant.trackPublications.forEach((pub) => {
               if (pub.track?.attach) {

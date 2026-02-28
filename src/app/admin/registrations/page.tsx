@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import {
   verifyWwcc,
   verifyTeacherRegistration,
@@ -18,8 +17,6 @@ export default async function AdminRegistrationsPage() {
   });
 
   const pending = teachers.filter((t) => t.applicationStatus === "PENDING");
-  const approved = teachers.filter((t) => t.applicationStatus === "APPROVED");
-  const rejected = teachers.filter((t) => t.applicationStatus === "REJECTED");
 
   return (
     <div>
@@ -111,10 +108,10 @@ function RegistrationRow({
   onReject,
 }: {
   teacher: { id: string; fullName: string; wwccNumber: string | null; wwccExpiry: Date | null; wwccVerified: boolean; teacherRegistrationNumber: string | null; teacherRegistrationExpiry: Date | null; teacherRegVerified: boolean; user: { email: string | null } };
-  onVerifyWwcc: (formData: FormData) => Promise<{ success: boolean }>;
-  onVerifyTrb: (formData: FormData) => Promise<{ success: boolean }>;
-  onApprove: (formData: FormData) => Promise<{ success: boolean }>;
-  onReject: (formData: FormData) => Promise<{ success: boolean }>;
+  onVerifyWwcc: (formData: FormData) => void | Promise<void>;
+  onVerifyTrb: (formData: FormData) => void | Promise<void>;
+  onApprove: (formData: FormData) => void | Promise<void>;
+  onReject: (formData: FormData) => void | Promise<void>;
 }) {
   const canApprove = teacher.wwccVerified && teacher.teacherRegVerified;
 

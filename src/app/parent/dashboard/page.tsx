@@ -12,34 +12,82 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import SignOutButton from "@/components/SignOutButton";
 
 export default async function ParentDashboardPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== Role.PARENT) redirect("/login");
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    include: {
-      parentProfile: {
-        include: { students: true },
+  type UserWithParent = Awaited<
+    ReturnType<
+      typeof prisma.user.findUnique<{
+        where: { id: string };
+        include: { parentProfile: { include: { students: true } } };
+      }>
+    >
+  >;
+  type RecentSessions = Awaited<
+    ReturnType<
+      typeof prisma.tutoringSession.findMany<{
+        include: { student: true; teacher: { select: { name: true } } };
+      }>
+    >
+  >;
+  let user: UserWithParent = null;
+  let recentSessions: RecentSessions = [];
+  let dataError: string | null = null;
+
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: {
+        parentProfile: {
+          include: { students: true },
+        },
       },
-    },
-  });
+    });
+    if (!user?.parentProfile) redirect("/signup/parent");
+
+    recentSessions = await prisma.tutoringSession.findMany({
+      where: { requestedByUserId: session.user.id },
+      orderBy: { requestedAt: "desc" },
+      take: 5,
+      include: {
+        student: true,
+        teacher: { select: { name: true } },
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    dataError = message;
+    console.error("[Parent dashboard] Prisma error:", err);
+  }
+
+  if (dataError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 px-4">
+        <h1 className="text-xl font-semibold text-slate-900">Could not load dashboard</h1>
+        <p className="max-w-md text-center text-sm text-slate-600">
+          A database error occurred. In production, check Vercel → Project → Settings → Environment Variables:
+          <strong> DATABASE_URL</strong>, <strong>AUTH_SECRET</strong>, and <strong>NEXTAUTH_URL</strong> (e.g.{" "}
+          <code className="rounded bg-slate-200 px-1">https://instant-teacher.vercel.app</code>).
+        </p>
+        <p className="text-xs text-slate-500">Error: {dataError}</p>
+        <div className="flex gap-3">
+          <Button asChild>
+            <Link href="/parent/dashboard">Try again</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/">Go home</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!user?.parentProfile) redirect("/signup/parent");
-
   const { parentProfile } = user;
   const students = parentProfile.students;
-
-  const recentSessions = await prisma.tutoringSession.findMany({
-    where: { requestedByUserId: user.id },
-    orderBy: { requestedAt: "desc" },
-    take: 5,
-    include: {
-      student: true,
-      teacher: { select: { name: true } },
-    },
-  });
 
   const canJoin = (status: string) =>
     ["PAID", "MATCHED", "ROOM_CREATED", "STUDENT_WAITING", "TEACHER_JOINED", "IN_PROGRESS"].includes(status);
@@ -55,11 +103,7 @@ export default async function ParentDashboardPage() {
             <Link href="/parent/sessions" className="text-sm text-slate-600 hover:text-slate-900">
               Session history
             </Link>
-            <form action="/api/auth/signout" method="POST">
-              <Button type="submit" variant="ghost" size="sm">
-                Sign out
-              </Button>
-            </form>
+            <SignOutButton variant="ghost" size="sm" callbackUrl="/" />
           </nav>
         </div>
       </header>
@@ -96,7 +140,7 @@ export default async function ParentDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <Button asChild size="sm" className="w-full">
-                      <Link href={`/parent/help?studentId=${s.id}`}>
+                      <Link href="/">
                         Find teacher now
                       </Link>
                     </Button>
@@ -125,9 +169,14 @@ export default async function ParentDashboardPage() {
                         {s.status.replace("_", " ")}
                       </Badge>
                       {canJoin(s.status) && (
-                        <Button size="sm" asChild>
-                          <Link href={`/session/${s.id}`}>Join</Link>
-                        </Button>
+                        <>
+                          <Button size="sm" asChild>
+                            <Link href={`/session/${s.id}`}>Join</Link>
+                          </Button>
+                          <Button size="sm" variant="outline" asChild>
+                            <Link href={`/session/${s.id}/video?role=student`}>Join video call</Link>
+                          </Button>
+                        </>
                       )}
                       {s.status === "ENDED" && !s.rating && (
                         <Button size="sm" variant="outline" asChild>

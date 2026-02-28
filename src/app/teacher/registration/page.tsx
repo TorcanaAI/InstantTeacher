@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shield, BookOpen, CheckCircle, XCircle, Clock } from "lucide-react";
+import SignOutButton from "@/components/SignOutButton";
 
 export default async function TeacherRegistrationPage() {
   const session = await auth();
@@ -32,11 +33,7 @@ export default async function TeacherRegistrationPage() {
             <Link href="/teacher/dashboard" className="text-sm font-medium text-slate-600 hover:text-[hsl(var(--hero-teal))]">
               Dashboard
             </Link>
-            <form action="/api/auth/signout" method="POST">
-              <Button type="submit" variant="ghost" size="sm">
-                Sign out
-              </Button>
-            </form>
+            <SignOutButton variant="ghost" size="sm" callbackUrl="/" />
           </nav>
         </div>
       </header>

@@ -27,7 +27,6 @@ export async function verifyWwcc(formData: FormData) {
   });
   revalidatePath("/admin/registrations");
   revalidatePath("/admin/teachers");
-  return { success: true };
 }
 
 export async function verifyTeacherRegistration(formData: FormData) {
@@ -44,7 +43,6 @@ export async function verifyTeacherRegistration(formData: FormData) {
   });
   revalidatePath("/admin/registrations");
   revalidatePath("/admin/teachers");
-  return { success: true };
 }
 
 export async function approveTeacherApplication(formData: FormData) {
@@ -65,7 +63,6 @@ export async function approveTeacherApplication(formData: FormData) {
   });
   revalidatePath("/admin/registrations");
   revalidatePath("/admin/teachers");
-  return { success: true };
 }
 
 export async function rejectTeacherApplication(formData: FormData) {
@@ -83,5 +80,4 @@ export async function rejectTeacherApplication(formData: FormData) {
   });
   revalidatePath("/admin/registrations");
   revalidatePath("/admin/teachers");
-  return { success: true };
 }

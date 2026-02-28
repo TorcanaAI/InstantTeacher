@@ -52,6 +52,7 @@ function CheckoutContent() {
   const sessionId = searchParams.get("sessionId");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [allowsIncrementalCharges, setAllowsIncrementalCharges] = useState(false);
 
   useEffect(() => {
     if (!sessionId) {
@@ -63,7 +64,7 @@ function CheckoutContent() {
         const res = await fetch("/api/stripe/create-payment-intent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId }),
+          body: JSON.stringify({ sessionId, allowsIncrementalCharges }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -75,7 +76,7 @@ function CheckoutContent() {
         setErr("Something went wrong");
       }
     })();
-  }, [sessionId]);
+  }, [sessionId, allowsIncrementalCharges]);
 
   if (!sessionId) {
     return (
@@ -125,10 +126,28 @@ function CheckoutContent() {
             You&apos;ll join the session right after payment.
           </p>
         </CardHeader>
-        <CardContent>
-          <Elements stripe={stripePromise} options={options}>
-            <CheckoutForm sessionId={sessionId} />
-          </Elements>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={allowsIncrementalCharges}
+                onChange={(e) => setAllowsIncrementalCharges(e.target.checked)}
+                className="mt-0.5"
+              />
+              <div className="text-sm">
+                <p className="font-medium text-slate-900">Allow session extensions</p>
+                <p className="mt-1 text-slate-600">
+                  If your teacher needs more time, they can extend the session (up to 60 minutes total) and your saved payment method will be charged automatically. You&apos;ll receive an email notification for each extension.
+                </p>
+              </div>
+            </label>
+          </div>
+          {clientSecret && (
+            <Elements stripe={stripePromise} options={options}>
+              <CheckoutForm sessionId={sessionId} />
+            </Elements>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -9,6 +9,7 @@ import { MATCH_TIMEOUT_SECONDS } from "@/lib/constants";
 type RequestItem = {
   id: string;
   subject: string;
+  section: string;
   yearLevel: number;
   durationMinutes: number;
   studentPrompt: string | null;
@@ -97,7 +98,7 @@ export default function IncomingRequests() {
           <Card key={r.id}>
             <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
               <div>
-                <p className="font-medium">{r.subject} · Year {r.yearLevel} · {r.durationMinutes} min</p>
+                <p className="font-medium">{r.section} · Year {r.yearLevel} · {r.subject} · {r.durationMinutes} min</p>
                 <p className="text-sm text-muted-foreground">{r.studentName}{r.studentPrompt ? ` · ${r.studentPrompt.slice(0, 60)}${r.studentPrompt.length > 60 ? "…" : ""}` : ""}</p>
               </div>
               <div className="flex items-center gap-3">

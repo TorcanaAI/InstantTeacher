@@ -1,88 +1,70 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { createTestVideoSession } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
-import { VideoTestRoom } from "./video-test-room";
 
-export default function AdminVideoTestPage() {
-  const [roomName, setRoomName] = useState<string | null>(null);
-  const [joinToken, setJoinToken] = useState<{ token: string; roomName: string; role: "teacher" | "student" } | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [joining, setJoining] = useState<"teacher" | "student" | null>(null);
+export default function VideoTestPage() {
+  const [roomUrl, setRoomUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function createRoom() {
-    setCreating(true);
+  async function handleCreate() {
+    setLoading(true);
+    setError(null);
+    setRoomUrl(null);
     try {
-      const res = await fetch("/api/admin/video-test?action=create", { method: "GET" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to create room");
-      setRoomName(data.roomName);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed");
+      const res = await createTestVideoSession();
+      setRoomUrl(res.roomUrl);
+    } catch {
+      setError("Failed to create video session. Check server logs.");
     } finally {
-      setCreating(false);
+      setLoading(false);
     }
-  }
-
-  async function joinAs(role: "teacher" | "student") {
-    if (!roomName) {
-      alert("Create a test room first");
-      return;
-    }
-    setJoining(role);
-    try {
-      const res = await fetch(`/api/admin/video-test?action=token&roomName=${encodeURIComponent(roomName)}&role=${role}`, { method: "GET" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to get token");
-      setJoinToken({ token: data.token, roomName: data.roomName, role });
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed");
-      setJoining(null);
-    }
-  }
-
-  if (joinToken) {
-    return (
-      <VideoTestRoom
-        token={joinToken.token}
-        roomName={joinToken.roomName}
-        role={joinToken.role}
-        onLeave={() => setJoinToken(null)}
-      />
-    );
   }
 
   return (
-    <div className="max-w-md space-y-6">
+    <div className="space-y-6">
       <div>
-        <Link href="/admin" className="text-sm text-slate-600 hover:text-slate-900">← Admin</Link>
-        <h1 className="text-2xl font-bold mt-2">Video call test</h1>
-        <p className="text-muted-foreground mt-1">
-          Create a test room and join as Teacher or Student to validate Twilio Video.
+        <Link href="/admin/dashboard" className="text-sm text-slate-600 hover:text-slate-900">
+          ← Admin
+        </Link>
+        <h1 className="mt-2 text-2xl font-bold">Video Test</h1>
+        <p className="mt-1 text-muted-foreground">
+          Create a Daily room (server-only). No DB, no Stripe. Room URL is for joining only.
         </p>
       </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Test room</CardTitle>
-          <CardDescription>
-            {roomName ? `Room: ${roomName}` : "Create a room, then join in two tabs (teacher + student)."}
-          </CardDescription>
+          <CardTitle>Create test session</CardTitle>
+          <CardDescription>Uses Daily API on the server. Restart dev server after changing env.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <Button onClick={createRoom} disabled={creating}>
-            {creating ? "Creating…" : "Create test room"}
+        <CardContent className="space-y-4">
+          <Button onClick={handleCreate} disabled={loading}>
+            {loading ? "Creating…" : "Create Test Video Session"}
           </Button>
-          {roomName && (
-            <>
-              <Button variant="outline" onClick={() => joinAs("teacher")} disabled={joining !== null}>
-                {joining === "teacher" ? "Joining…" : "Join as Teacher"}
-              </Button>
-              <Button variant="outline" onClick={() => joinAs("student")} disabled={joining !== null}>
-                {joining === "student" ? "Joining…" : "Join as Student"}
-              </Button>
-            </>
+
+          {error && (
+            <p className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+
+          {roomUrl && (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+              <p className="font-medium text-green-800">Room created</p>
+              <a
+                href={roomUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-primary underline hover:no-underline"
+              >
+                Join Video Room
+              </a>
+            </div>
           )}
         </CardContent>
       </Card>

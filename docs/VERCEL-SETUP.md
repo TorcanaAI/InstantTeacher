@@ -52,10 +52,17 @@ This guide walks you through **hosting InstantTeacher on Vercel** and adding a *
    - **Region:** pick one close to you (e.g. Sydney for Australia).  
 5. After Neon is created, Vercel will add environment variables to your project. One of them will be **`DATABASE_URL`** (or **`POSTGRES_URL`**).  
 6. Open your project **Settings** → **Environment Variables**.  
-7. Find **`DATABASE_URL`**. If you see **`POSTGRES_URL`** instead, either:
+7. **Add `AUTH_SECRET`** (required for login to work in production):
+   - Click **Add New** → **Key:** `AUTH_SECRET`, **Value:** a long random string (e.g. run in terminal: `openssl rand -base64 32` and paste the result).  
+   - Save. Without this, parent/admin login will fail.  
+8. **Add `NEXTAUTH_URL`** (recommended for parent/login redirects):
+   - Click **Add New** → **Key:** `NEXTAUTH_URL`, **Value:** your production URL, e.g. `https://instant-teacher.vercel.app` (or your custom domain).  
+   - If you omit this, the app will try to use Vercel’s `VERCEL_URL` automatically.  
+10. Find **`DATABASE_URL`**. If you see **`POSTGRES_URL`** instead, either:
    - Add a new variable **`DATABASE_URL`** with the **same value** as `POSTGRES_URL`, **or**  
    - Remember to use `POSTGRES_URL` in your app if your code reads that (InstantTeacher expects **`DATABASE_URL`**).  
-8. **Copy** the value of `DATABASE_URL` (click to reveal, then copy). You’ll use it in Step 4.
+11. **Copy** the value of `DATABASE_URL` (click to reveal, then copy). You’ll use it in Step 4.
+12. **For payments (Instant Sunshine and tutoring):** Add **`STRIPE_SECRET_KEY`** and **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`** (from [Stripe Dashboard → API keys](https://dashboard.stripe.com/apikeys)). Without these, the checkout page will show “Payments are not configured.” See **docs/STRIPE.md** for full steps and webhook setup.
 
 ---
 
@@ -125,8 +132,9 @@ The seed script creates one admin user. You can control which email and password
 |--------|------------------|
 | No **Storage** or **Neon** in Vercel | Look under **Integrations** or **Marketplace** and search for **Neon** or **Postgres**. |
 | Build fails with “DATABASE_URL not found” | In Vercel → Project → **Settings** → **Environment Variables**, add `DATABASE_URL` with the same value as your Neon connection string. Redeploy. |
-| Login doesn’t work after deploy | Make sure you ran `npx prisma db push` and `npm run db:seed` **after** adding `DATABASE_URL` (Step 4). The seed creates the admin user. |
+| Login doesn’t work after deploy | 1) Add **AUTH_SECRET** in Vercel → Settings → Environment Variables (e.g. `openssl rand -base64 32`). 2) Run `npx prisma db push` and `npm run db:seed` **after** adding `DATABASE_URL` (Step 4). The seed creates the admin user. 3) Use the exact email and password from the seed (default password: see seed script or set `ADMIN_PASSWORD` when running seed). |
 | “Invalid connection string” | Ensure `DATABASE_URL` has no extra spaces, is in double quotes in `.env`, and includes `?sslmode=require` if your Neon URL has it. |
+| “AUTH_SECRET is required” | In Vercel → Project → Settings → Environment Variables, add `AUTH_SECRET` with a long random string. Redeploy. |
 
 ---
 
@@ -135,6 +143,7 @@ The seed script creates one admin user. You can control which email and password
 - [ ] Signed in to Vercel  
 - [ ] Imported InstantTeacher project  
 - [ ] Added Neon (Postgres) from Storage / Marketplace and linked it to the project  
+- [ ] **Added `AUTH_SECRET`** in Vercel → Settings → Environment Variables (required for login)  
 - [ ] Copied `DATABASE_URL` from Vercel into local `.env`  
 - [ ] Ran `npx prisma db push`  
 - [ ] Ran `npm run db:seed`  

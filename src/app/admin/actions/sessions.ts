@@ -21,9 +21,31 @@ const REFUNDABLE_STATUSES = [
   "ENDED",
 ] as const;
 
+const PENDING_DELETABLE_STATUSES = ["REQUESTED", "PAYMENT_PENDING"] as const;
+
+export async function deletePendingSession(sessionId: string): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user || (session.user as { role?: Role }).role !== Role.ADMIN) {
+    return { error: "Unauthorized" };
+  }
+
+  const t = await prisma.tutoringSession.findUnique({
+    where: { id: sessionId },
+  });
+  if (!t) return { error: "Session not found" };
+  if (!PENDING_DELETABLE_STATUSES.includes(t.status as (typeof PENDING_DELETABLE_STATUSES)[number])) {
+    return { error: "Only REQUESTED or PAYMENT_PENDING sessions can be deleted" };
+  }
+
+  await prisma.tutoringSession.delete({
+    where: { id: sessionId },
+  });
+  return {};
+}
+
 export async function refundSession(sessionId: string): Promise<{ error?: string }> {
   const session = await auth();
-  if (!session?.user || session.user.role !== Role.ADMIN) {
+  if (!session?.user || (session.user as { role?: Role }).role !== Role.ADMIN) {
     return { error: "Unauthorized" };
   }
 
