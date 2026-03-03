@@ -744,7 +744,7 @@ function SunshineReadingContent() {
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-amber-900">Sunshine is listening</p>
               <p className="text-sm text-amber-800">
-                Read aloud — she's following along, will correct words if needed, and will offer help if you're stuck.
+                Read aloud — she&apos;s following along, will correct words if needed, and will offer help if you&apos;re stuck.
               </p>
             </div>
             <div className="flex items-end gap-0.5 h-8 shrink-0">
