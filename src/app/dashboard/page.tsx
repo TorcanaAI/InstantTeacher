@@ -18,12 +18,9 @@ export default async function DashboardPage() {
   switch (role) {
     case Role.ADMIN:
       redirect("/admin");
-    case Role.TEACHER:
-      redirect("/teacher/dashboard");
     case Role.PARENT:
-      redirect("/parent/dashboard");
     case Role.STUDENT:
-      redirect("/parent/dashboard"); // students use parent flow for now
+      redirect("/parent/dashboard");
     default:
       redirect("/");
   }

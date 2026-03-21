@@ -46,24 +46,12 @@ export default function TermsOfUsePage() {
         </p>
 
         <h2 className="mt-8 text-lg font-semibold text-slate-900">
-          For educators
-        </h2>
-        <p>
-          Educators using Instant Teacher do so as independent contractors, not
-          as employees. Separate terms—including the Independent Contractor
-          Agreement and Child Safety & Professional Conduct Statement—apply to
-          educators and are presented at signup. You must comply with those
-          terms and with your own tax, insurance, and professional obligations.
-        </p>
-
-        <h2 className="mt-8 text-lg font-semibold text-slate-900">
           Payments and cancellations
         </h2>
         <p>
           Payment terms are set out at the point of purchase. Refunds and
           cancellations are handled in line with our policies and applicable
-          law. We do not guarantee any particular level of income or number of
-          sessions for educators.
+          law.
         </p>
 
         <h2 className="mt-8 text-lg font-semibold text-slate-900">

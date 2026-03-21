@@ -1,8 +1,14 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
+
+// One secret for signing JWTs — middleware must decode with the same value
+const _secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+if (_secret) {
+  process.env.AUTH_SECRET ??= _secret;
+  process.env.NEXTAUTH_SECRET ??= _secret;
+}
 
 if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET) {
   throw new Error(
@@ -10,14 +16,28 @@ if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET) {
   );
 }
 
-// On Vercel, NEXTAUTH_URL is often missing; derive from VERCEL_URL so callbacks and cookies work
-if (process.env.VERCEL_URL && !process.env.NEXTAUTH_URL) {
-  process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+// Canonical URL for Auth.js (CSRF, cookies, redirects). Wrong host = login "works" but session is lost on custom domains.
+// Prefer explicit AUTH_URL / NEXTAUTH_URL, then public app URL (production domain), then Vercel deployment URL.
+if (!process.env.NEXTAUTH_URL && !process.env.AUTH_URL) {
+  const fromPublic =
+    process.env.NEXT_PUBLIC_APP_URL?.startsWith("http") === true
+      ? process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")
+      : "";
+  if (fromPublic) {
+    process.env.NEXTAUTH_URL = fromPublic;
+    process.env.AUTH_URL = fromPublic;
+  } else if (process.env.VERCEL_URL) {
+    process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+  }
+} else if (process.env.AUTH_URL && !process.env.NEXTAUTH_URL) {
+  process.env.NEXTAUTH_URL = process.env.AUTH_URL;
+} else if (process.env.NEXTAUTH_URL && !process.env.AUTH_URL) {
+  process.env.AUTH_URL = process.env.NEXTAUTH_URL;
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma User has role; adapter types conflict
-  adapter: PrismaAdapter(prisma) as any,
+  // JWT + credentials only — no PrismaAdapter. Adapter is for DB sessions / OAuth linking and can
+  // conflict with credentials sign-in in Auth.js v5; we still use Prisma inside `authorize`.
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   trustHost: true,
   pages: {
@@ -85,8 +105,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = (user as { role: Role }).role;
+        const u = user as { id: string; role: Role };
+        token.sub = u.id;
+        token.id = u.id;
+        token.role = u.role;
       }
       return token;
     },

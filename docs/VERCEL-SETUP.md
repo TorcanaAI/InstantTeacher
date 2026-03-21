@@ -56,7 +56,7 @@ This guide walks you through **hosting InstantTeacher on Vercel** and adding a *
    - Click **Add New** → **Key:** `AUTH_SECRET`, **Value:** a long random string (e.g. run in terminal: `openssl rand -base64 32` and paste the result).  
    - Save. Without this, parent/admin login will fail.  
 8. **Add `NEXTAUTH_URL`** (recommended for parent/login redirects):
-   - Click **Add New** → **Key:** `NEXTAUTH_URL`, **Value:** your production URL, e.g. `https://instant-teacher.vercel.app` (or your custom domain).  
+   - Click **Add New** → **Key:** `NEXTAUTH_URL`, **Value:** your production URL, e.g. `https://instant-teacher.vercel.app` (or your custom domain). If you use a custom domain (e.g. Crazy Domains), see **docs/CUSTOM-DOMAIN-CRAZY-DOMAINS.md** for full steps.  
    - If you omit this, the app will try to use Vercel’s `VERCEL_URL` automatically.  
 10. Find **`DATABASE_URL`**. If you see **`POSTGRES_URL`** instead, either:
    - Add a new variable **`DATABASE_URL`** with the **same value** as `POSTGRES_URL`, **or**  

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiteLogo from "@/components/SiteLogo";
 
 export default function LegalLayout({
   children,
@@ -8,10 +9,8 @@ export default function LegalLayout({
   return (
     <div className="min-h-screen bg-gradient-to-b from-[hsl(173,58%,96%)] to-white">
       <header className="sticky top-0 z-10 border-b border-teal-100 bg-white/95 backdrop-blur-sm">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <Link href="/" className="text-lg font-bold text-[hsl(var(--hero-teal))]">
-            InstantTeacher
-          </Link>
+        <div className="container mx-auto flex min-h-32 items-center justify-between px-4 py-4">
+          <SiteLogo height={104} />
           <nav className="flex items-center gap-4">
             <Link href="/legal/privacy" className="text-sm text-slate-600 hover:text-[hsl(var(--hero-teal))]">
               Privacy

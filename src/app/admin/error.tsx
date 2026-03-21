@@ -20,22 +20,22 @@ export default function AdminError({
   const isDev = typeof window !== "undefined" && process.env.NODE_ENV === "development";
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 px-4">
-      <h1 className="text-xl font-semibold text-slate-900">Admin error</h1>
-      <p className="max-w-md text-center text-sm text-slate-600">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
+      <h1 className="text-xl font-semibold text-foreground">Admin error</h1>
+      <p className="max-w-md text-center text-sm text-muted-foreground">
         Something went wrong loading this page. Check that DATABASE_URL and AUTH_SECRET are set
         correctly in Vercel, and that the database is reachable.
       </p>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         Digest: {error.digest ?? "—"} (check server logs for exact stack trace)
       </p>
       {isDev && error.message && (
-        <pre className="max-h-32 overflow-auto rounded bg-slate-200 p-2 text-xs">
+        <pre className="max-h-32 overflow-auto rounded bg-muted p-2 text-xs text-foreground">
           {error.message}
         </pre>
       )}
       {isDev && error.stack && (
-        <pre className="max-h-48 overflow-auto rounded bg-slate-200 p-2 text-xs">
+        <pre className="max-h-48 overflow-auto rounded bg-muted p-2 text-xs text-foreground">
           {error.stack}
         </pre>
       )}

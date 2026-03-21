@@ -1,49 +1,74 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SESSION_DURATIONS } from "@/lib/constants";
+import { SiteHeaderPublic } from "@/components/SiteHeader";
+import {
+  HOMEWORK_SESSION_MINUTES,
+  HOMEWORK_SESSION_PRICE_CENTS,
+  SUBSCRIPTION_WEEKLY_PRICE_CENTS,
+  SUBSCRIPTION_MONTHLY_PRICE_CENTS,
+} from "@/lib/constants";
 
 export default function PricingPage() {
+  const sessionPrice = (HOMEWORK_SESSION_PRICE_CENTS / 100).toFixed(0);
+  const weeklyPrice = (SUBSCRIPTION_WEEKLY_PRICE_CENTS / 100).toFixed(0);
+  const monthlyPrice = (SUBSCRIPTION_MONTHLY_PRICE_CENTS / 100).toFixed(0);
+
   return (
-    <div className="min-h-screen bg-white">
-      <header className="sticky top-0 z-50 border-b border-teal-100 bg-white/95 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="text-xl font-bold text-[hsl(var(--hero-teal))]">
-            InstantTeacher
-          </Link>
-          <nav className="flex items-center gap-4">
-            <Link href="/" className="text-sm font-medium text-slate-600 hover:text-[hsl(var(--hero-teal))]">Home</Link>
-            <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-[hsl(var(--hero-teal))]">Sign in</Link>
-            <Link href="/auth/login" className="text-sm font-medium text-slate-500 hover:text-slate-700">Admin</Link>
-            <Button asChild size="sm" className="rounded-full bg-[hsl(var(--hero-teal))] hover:bg-[hsl(var(--hero-teal))]/90">
-              <Link href="/signup">Get help now</Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
-      <main className="relative overflow-hidden bg-gradient-to-b from-[hsl(173,58%,96%)] to-white">
-        <div className="container mx-auto max-w-3xl px-4 py-16">
-          <h1 className="text-3xl font-bold text-slate-900 md:text-4xl">Pricing</h1>
-          <p className="mt-2 text-slate-600">
-            Pay per session. No subscription. No lock-in.
+    <div className="min-h-screen flex flex-col bg-background">
+      <SiteHeaderPublic />
+      <main className="flex-1 bg-gradient-to-b from-primary/5 to-background">
+        <div className="container mx-auto max-w-4xl px-4 py-16">
+          <h1 className="text-3xl font-bold text-foreground md:text-4xl">Pricing</h1>
+          <p className="mt-2 text-muted-foreground">
+            Homework help, exam prep & school support with Sunshine and Jack. Pay per session or subscribe for unlimited help.
           </p>
           <div className="mt-12 grid gap-6 sm:grid-cols-3">
-            {SESSION_DURATIONS.map((d) => (
-              <Card key={d.minutes} className="rounded-2xl border-2 border-slate-100 transition hover:border-[hsl(var(--hero-teal))]/30">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-slate-900">{d.label}</CardTitle>
-                  <CardContent className="p-0 pt-2">
-                    <p className="text-2xl font-bold text-[hsl(var(--hero-teal))]">{d.priceLabel}</p>
-                    <p className="text-sm text-slate-600">One-off</p>
-                  </CardContent>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild className="w-full rounded-full bg-[hsl(var(--hero-teal))] hover:bg-[hsl(var(--hero-teal))]/90">
-                    <Link href="/signup">Book now</Link>
-                  </Button>
+            <Card className="rounded-2xl border-2 border-border transition hover:border-primary/30 hover:shadow-md">
+              <CardHeader className="text-center">
+                <CardTitle className="text-foreground">{HOMEWORK_SESSION_MINUTES} min session</CardTitle>
+                <CardContent className="p-0 pt-2">
+                  <p className="text-2xl font-bold text-primary">${sessionPrice}</p>
+                  <p className="text-sm text-muted-foreground">One-off · Sunshine or Jack</p>
                 </CardContent>
-              </Card>
-            ))}
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4 text-center text-xs text-muted-foreground">Ask questions, upload homework photos, get step-by-step help.</p>
+                <Button asChild className="w-full rounded-full">
+                  <Link href="/signup">Get started</Link>
+                </Button>
+              </CardContent>
+            </Card>
+            <Card className="rounded-2xl border-2 border-primary/40 bg-secondary/30">
+              <CardHeader className="text-center">
+                <CardTitle className="text-foreground">Weekly</CardTitle>
+                <CardContent className="p-0 pt-2">
+                  <p className="text-2xl font-bold text-primary">${weeklyPrice}/week</p>
+                  <p className="text-sm text-muted-foreground">Unlimited sessions</p>
+                </CardContent>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4 text-center text-xs text-muted-foreground">Best for short-term exam prep or trying out.</p>
+                <Button asChild className="w-full rounded-full">
+                  <Link href="/signup">Subscribe</Link>
+                </Button>
+              </CardContent>
+            </Card>
+            <Card className="rounded-2xl border-2 border-border transition hover:border-primary/30 hover:shadow-md">
+              <CardHeader className="text-center">
+                <CardTitle className="text-foreground">Monthly</CardTitle>
+                <CardContent className="p-0 pt-2">
+                  <p className="text-2xl font-bold text-primary">${monthlyPrice}/month</p>
+                  <p className="text-sm text-muted-foreground">Unlimited sessions</p>
+                </CardContent>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4 text-center text-xs text-muted-foreground">Best value for ongoing homework & exam support.</p>
+                <Button asChild className="w-full rounded-full">
+                  <Link href="/signup">Subscribe</Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

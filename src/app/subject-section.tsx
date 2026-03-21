@@ -5,21 +5,7 @@ import { BookOpen, ClipboardList, GraduationCap } from "lucide-react";
 import { SUBJECTS } from "@/lib/constants";
 
 const TILE_CLASS =
-  "group flex flex-col items-center justify-center rounded-2xl border-2 border-slate-200 bg-white p-6 text-center shadow-sm transition hover:border-[hsl(var(--hero-teal))] hover:shadow-md sm:p-8";
-
-const NAPLAN_TILE = {
-  title: "NAPLAN Assistance",
-  subtitle: "Years 3, 5, 7 & 9 support",
-  href: "/help/naplan",
-  icon: ClipboardList,
-};
-
-const ATAR_TILE = {
-  title: "ATAR Support",
-  subtitle: "Years 10–12 exam & assignment help",
-  href: "/help/atar",
-  icon: GraduationCap,
-};
+  "group flex flex-col items-center justify-center rounded-2xl border-2 border-border bg-card p-6 text-center shadow-sm transition hover:border-primary/40 hover:shadow-md sm:p-8";
 
 export default function SubjectSection() {
   return (
@@ -27,29 +13,29 @@ export default function SubjectSection() {
       {SUBJECTS.map((subject) => (
         <Link
           key={subject}
-          href={`/help/study?subject=${encodeURIComponent(subject)}`}
+          href="/signup"
           className={TILE_CLASS}
         >
-          <BookOpen className="mx-auto h-10 w-10 text-[hsl(var(--hero-teal))] transition group-hover:scale-110 sm:h-12 sm:w-12" />
-          <span className="mt-3 block font-semibold text-slate-800 group-hover:text-[hsl(var(--hero-teal))]">
+          <BookOpen className="mx-auto h-10 w-10 text-primary transition group-hover:scale-110 sm:h-12 sm:w-12" />
+          <span className="mt-3 block font-semibold text-card-foreground group-hover:text-primary">
             {subject}
           </span>
-          <span className="mt-1 block text-sm text-slate-600">Homework & study help</span>
+          <span className="mt-1 block text-sm text-muted-foreground">Homework & exam help</span>
         </Link>
       ))}
-      <Link href={NAPLAN_TILE.href} className={TILE_CLASS}>
-        <NAPLAN_TILE.icon className="mx-auto h-10 w-10 text-[hsl(var(--hero-teal))] transition group-hover:scale-110 sm:h-12 sm:w-12" />
-        <span className="mt-3 block font-semibold text-slate-800 group-hover:text-[hsl(var(--hero-teal))]">
-          {NAPLAN_TILE.title}
+      <Link href="/signup" className={TILE_CLASS}>
+        <ClipboardList className="mx-auto h-10 w-10 text-primary transition group-hover:scale-110 sm:h-12 sm:w-12" />
+        <span className="mt-3 block font-semibold text-card-foreground group-hover:text-primary">
+          NAPLAN
         </span>
-        <span className="mt-1 block text-sm text-slate-600">{NAPLAN_TILE.subtitle}</span>
+        <span className="mt-1 block text-sm text-muted-foreground">Years 3, 5, 7 & 9</span>
       </Link>
-      <Link href={ATAR_TILE.href} className={TILE_CLASS}>
-        <ATAR_TILE.icon className="mx-auto h-10 w-10 text-[hsl(var(--hero-teal))] transition group-hover:scale-110 sm:h-12 sm:w-12" />
-        <span className="mt-3 block font-semibold text-slate-800 group-hover:text-[hsl(var(--hero-teal))]">
-          {ATAR_TILE.title}
+      <Link href="/signup" className={TILE_CLASS}>
+        <GraduationCap className="mx-auto h-10 w-10 text-primary transition group-hover:scale-110 sm:h-12 sm:w-12" />
+        <span className="mt-3 block font-semibold text-card-foreground group-hover:text-primary">
+          ATAR
         </span>
-        <span className="mt-1 block text-sm text-slate-600">{ATAR_TILE.subtitle}</span>
+        <span className="mt-1 block text-sm text-muted-foreground">Years 10–12</span>
       </Link>
     </div>
   );

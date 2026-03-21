@@ -4,15 +4,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import SignOutButton from "@/components/SignOutButton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SiteHeaderParent } from "@/components/SiteHeader";
 
 export default async function ParentDashboardPage() {
   const session = await auth();
@@ -22,19 +15,11 @@ export default async function ParentDashboardPage() {
     ReturnType<
       typeof prisma.user.findUnique<{
         where: { id: string };
-        include: { parentProfile: { include: { students: true } } };
-      }>
-    >
-  >;
-  type RecentSessions = Awaited<
-    ReturnType<
-      typeof prisma.tutoringSession.findMany<{
-        include: { student: true; teacher: { select: { name: true } } };
+        include: { parentProfile: { include: { students: { include: { badges: true } } } } };
       }>
     >
   >;
   let user: UserWithParent = null;
-  let recentSessions: RecentSessions = [];
   let dataError: string | null = null;
 
   try {
@@ -42,21 +27,11 @@ export default async function ParentDashboardPage() {
       where: { id: session.user.id },
       include: {
         parentProfile: {
-          include: { students: true },
+          include: { students: { include: { badges: true } } },
         },
       },
     });
     if (!user?.parentProfile) redirect("/signup/parent");
-
-    recentSessions = await prisma.tutoringSession.findMany({
-      where: { requestedByUserId: session.user.id },
-      orderBy: { requestedAt: "desc" },
-      take: 5,
-      include: {
-        student: true,
-        teacher: { select: { name: true } },
-      },
-    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     dataError = message;
@@ -65,14 +40,12 @@ export default async function ParentDashboardPage() {
 
   if (dataError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 px-4">
-        <h1 className="text-xl font-semibold text-slate-900">Could not load dashboard</h1>
-        <p className="max-w-md text-center text-sm text-slate-600">
-          A database error occurred. In production, check Vercel → Project → Settings → Environment Variables:
-          <strong> DATABASE_URL</strong>, <strong>AUTH_SECRET</strong>, and <strong>NEXTAUTH_URL</strong> (e.g.{" "}
-          <code className="rounded bg-slate-200 px-1">https://instant-teacher.vercel.app</code>).
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-muted/30 px-4">
+        <h1 className="text-xl font-semibold text-foreground">Could not load dashboard</h1>
+        <p className="max-w-md text-center text-sm text-muted-foreground">
+          A database error occurred. Check DATABASE_URL and try again.
         </p>
-        <p className="text-xs text-slate-500">Error: {dataError}</p>
+        <p className="text-xs text-muted-foreground">Error: {dataError}</p>
         <div className="flex gap-3">
           <Button asChild>
             <Link href="/parent/dashboard">Try again</Link>
@@ -89,28 +62,14 @@ export default async function ParentDashboardPage() {
   const { parentProfile } = user;
   const students = parentProfile.students;
 
-  const canJoin = (status: string) =>
-    ["PAID", "MATCHED", "ROOM_CREATED", "STUDENT_WAITING", "TEACHER_JOINED", "IN_PROGRESS"].includes(status);
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(173,58%,96%)] to-white">
-      <header className="border-b border-teal-100 bg-white/95 backdrop-blur-sm">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <Link href="/parent/dashboard" className="text-lg font-bold text-[hsl(var(--hero-teal))]">
-            InstantTeacher
-          </Link>
-          <nav className="flex items-center gap-4">
-            <Link href="/parent/sessions" className="text-sm text-slate-600 hover:text-slate-900">
-              Session history
-            </Link>
-            <SignOutButton variant="ghost" size="sm" callbackUrl="/" />
-          </nav>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col bg-background">
+      <SiteHeaderParent logoHref="/parent/dashboard" />
 
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold">Hi, {parentProfile.fullName}</h1>
-        <p className="text-muted-foreground">Get instant help for your child.</p>
+      <main className="flex-1 bg-gradient-to-b from-primary/5 to-background">
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-2xl font-bold text-foreground">Hi, {parentProfile.fullName}</h1>
+          <p className="text-muted-foreground">Homework help, exam prep & learning support with Sunshine and Jack.</p>
 
         <section className="mt-8">
           <div className="flex items-center justify-between">
@@ -136,13 +95,22 @@ export default async function ParentDashboardPage() {
                     <CardTitle className="text-base">{s.fullName}</CardTitle>
                     <CardDescription>
                       Year {s.schoolYear} · {s.schoolName}
+                      {(s.streakCurrent > 0 || (s.badges?.length ?? 0) > 0) && (
+                        <span className="mt-1 block">
+                          {s.streakCurrent > 0 && <>Streak: {s.streakCurrent} day{s.streakCurrent !== 1 ? "s" : ""}</>}
+                          {(s.badges?.length ?? 0) > 0 && <> · {s.badges?.length} badge{(s.badges?.length ?? 0) !== 1 ? "s" : ""}</>}
+                        </span>
+                      )}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex flex-col gap-2">
                     <Button asChild size="sm" className="w-full">
-                      <Link href="/">
-                        Find teacher now
+                      <Link href={`/parent/homework/start?studentId=${encodeURIComponent(s.id)}`}>
+                        Homework help (Sunshine & Jack)
                       </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/parent/student/${s.id}/activity`}>View activity</Link>
                     </Button>
                   </CardContent>
                 </Card>
@@ -150,49 +118,7 @@ export default async function ParentDashboardPage() {
             </div>
           )}
         </section>
-
-        {recentSessions.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-lg font-semibold">Recent sessions</h2>
-            <div className="mt-4 space-y-2">
-              {recentSessions.map((s) => (
-                <Card key={s.id}>
-                  <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
-                    <div>
-                      <p className="font-medium">{s.student.fullName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {s.subject} · {s.durationMinutes} min · {s.teacher?.name ?? (s.teacherId ? "Teacher" : "Waiting for teacher")}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={s.status === "ENDED" ? "secondary" : "default"}>
-                        {s.status.replace("_", " ")}
-                      </Badge>
-                      {canJoin(s.status) && (
-                        <>
-                          <Button size="sm" asChild>
-                            <Link href={`/session/${s.id}`}>Join</Link>
-                          </Button>
-                          <Button size="sm" variant="outline" asChild>
-                            <Link href={`/session/${s.id}/video?role=student`}>Join video call</Link>
-                          </Button>
-                        </>
-                      )}
-                      {s.status === "ENDED" && !s.rating && (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/session/${s.id}/rate`}>Rate</Link>
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <Button variant="outline" className="mt-4" asChild>
-              <Link href="/parent/sessions">View all</Link>
-            </Button>
-          </section>
-        )}
+        </div>
       </main>
     </div>
   );

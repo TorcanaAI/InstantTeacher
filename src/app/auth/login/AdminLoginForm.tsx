@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,13 +15,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const REDIRECT_URL = "/admin/dashboard";
+const ADMIN_DASHBOARD = "/admin/dashboard";
 
 export default function AdminLoginForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err === "forbidden") {
+      setError("That account is not an admin. Use the main login for parent accounts.");
+    } else if (err === "CredentialsSignin" || err === "Callback") {
+      setError("Invalid email or password.");
+    } else if (err === "Configuration") {
+      setError(
+        "Server configuration issue. Set AUTH_SECRET and ensure NEXTAUTH_URL (or NEXT_PUBLIC_APP_URL) matches this site’s URL in Vercel."
+      );
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,21 +46,22 @@ export default function AdminLoginForm() {
         email: email.trim().toLowerCase(),
         password,
         redirect: false,
-        callbackUrl: REDIRECT_URL,
+        callbackUrl: ADMIN_DASHBOARD,
       });
       if (res?.error || res?.ok === false) {
-        setError("Invalid email or password. Please try again.");
+        setError("Invalid email or password.");
         setLoading(false);
         return;
       }
       const targetUrl =
         res && "url" in res && typeof (res as { url?: string }).url === "string"
           ? (res as { url: string }).url
-          : REDIRECT_URL;
-      await new Promise((r) => setTimeout(r, 150));
-      window.location.assign(
-        targetUrl.startsWith("http") ? targetUrl : `${window.location.origin}${targetUrl}`
-      );
+          : ADMIN_DASHBOARD;
+      const fullUrl = targetUrl.startsWith("http")
+        ? targetUrl
+        : `${window.location.origin}${targetUrl}`;
+      // Hard navigation so middleware runs with the new session cookie (Auth.js sets __Secure-* on HTTPS)
+      window.location.assign(fullUrl);
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
@@ -53,7 +69,7 @@ export default function AdminLoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
       <Card className="w-full max-w-md rounded-2xl border-2 border-slate-200 shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl text-slate-900">Admin login</CardTitle>
@@ -64,14 +80,12 @@ export default function AdminLoginForm() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
-              </p>
+              <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="admin-email">Email</Label>
               <Input
-                id="email"
+                id="admin-email"
                 type="email"
                 placeholder="support@torcanaai.com"
                 value={email}
@@ -82,9 +96,9 @@ export default function AdminLoginForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="admin-password">Password</Label>
               <Input
-                id="password"
+                id="admin-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

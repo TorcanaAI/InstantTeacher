@@ -12,33 +12,33 @@
 
 @layer base {
   :root {
-    /* Australian / family-friendly: teal (trust, education) + warm amber (sun, friendly) */
+    /* Teal (trust, education) + warm amber accent. Strong, readable contrast. */
     --background: 0 0% 100%;
-    --foreground: 173 40% 14%;
+    --foreground: 173 35% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 173 40% 14%;
+    --card-foreground: 173 35% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 173 40% 14%;
-    --primary: 173 58% 32%;
+    --popover-foreground: 173 35% 12%;
+    --primary: 173 58% 35%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 43 74% 94%;
-    --secondary-foreground: 30 40% 20%;
-    --muted: 173 20% 96%;
-    --muted-foreground: 173 15% 40%;
-    --accent: 43 74% 94%;
-    --accent-foreground: 30 40% 20%;
-    --destructive: 0 84.2% 60.2%;
+    --secondary: 43 74% 92%;
+    --secondary-foreground: 30 35% 18%;
+    --muted: 173 18% 96%;
+    --muted-foreground: 173 12% 38%;
+    --accent: 43 74% 92%;
+    --accent-foreground: 30 35% 18%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 173 20% 90%;
-    --input: 173 20% 90%;
-    --ring: 173 58% 32%;
-    --chart-1: 173 58% 39%;
+    --border: 173 22% 88%;
+    --input: 173 22% 88%;
+    --ring: 173 58% 35%;
+    --chart-1: 173 58% 40%;
     --chart-2: 43 74% 55%;
     --chart-3: 197 37% 24%;
     --chart-4: 27 87% 67%;
     --chart-5: 160 60% 45%;
     --radius: 0.75rem;
-    --hero-teal: 173 58% 32%;
+    --hero-teal: 173 58% 35%;
     --hero-amber: 43 96% 56%;
   }
   .dark {

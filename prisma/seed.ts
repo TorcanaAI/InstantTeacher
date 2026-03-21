@@ -23,6 +23,7 @@ async function main() {
     });
   }
 
+  let adminUser = existing;
   if (existing) {
     await prisma.user.update({
       where: { id: existing.id },
@@ -30,20 +31,52 @@ async function main() {
     });
     console.log("Admin user updated:", adminEmail);
     console.log("Password hash set");
-    return;
+  } else {
+    adminUser = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        passwordHash,
+        name: "InstantTeacher Admin",
+        role: Role.ADMIN,
+      },
+    });
+    console.log("Admin user created:", adminEmail);
+    console.log("Password hash set");
   }
 
-  await prisma.user.create({
-    data: {
-      email: adminEmail,
-      passwordHash,
-      name: "InstantTeacher Admin",
-      role: Role.ADMIN,
-    },
+  // Ensure a Test Student exists for Sunshine testing (admin can act as parent)
+  const TEST_STUDENT_FULL_NAME = "Test Student (Sunshine)";
+  let parent = await prisma.parentProfile.findUnique({
+    where: { userId: adminUser!.id },
+    include: { students: true },
   });
-
-  console.log("Admin user created:", adminEmail);
-  console.log("Password hash set");
+  if (!parent) {
+    parent = await prisma.parentProfile.create({
+      data: {
+        userId: adminUser!.id,
+        fullName: "InstantTeacher Admin",
+        mobile: "0400000000",
+        suburb: "Perth",
+      },
+      include: { students: true },
+    });
+    console.log("Parent profile created for admin (for Sunshine testing)");
+  }
+  const testStudent = parent.students.find((s) => s.fullName === TEST_STUDENT_FULL_NAME);
+  if (!testStudent) {
+    await prisma.studentProfile.create({
+      data: {
+        parentId: parent.id,
+        fullName: TEST_STUDENT_FULL_NAME,
+        schoolYear: 3,
+        schoolName: "Test School",
+        subjects: ["English", "Mathematics"],
+      },
+    });
+    console.log("Test Student (Sunshine) created for admin testing");
+  } else {
+    console.log("Test Student (Sunshine) already exists");
+  }
 }
 
 main()

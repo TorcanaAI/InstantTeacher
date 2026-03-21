@@ -17,6 +17,14 @@ export default async function AdminSunshineTestPage() {
       <p className="text-muted-foreground">
         Admin-only. Use <strong>Ask Sunshine</strong> to ask questions (OpenAI + voice) or <strong>Type & Speak</strong> to hear any text in the Sunshine voice. No payment.
       </p>
+      <p className="mt-2 text-sm text-amber-700">
+        To test read-along (Sunshine reads aloud), use the reading test — pick a book and open it to try &quot;Have Sunshine read aloud&quot;.
+      </p>
+      <div className="mt-4 flex gap-2">
+        <Button variant="secondary" size="sm" asChild>
+          <Link href="/admin/sunshine-reading-test">Test Sunshine Reading (Test Student)</Link>
+        </Button>
+      </div>
       <div className="mt-6">
         <SunshineTestClient />
       </div>

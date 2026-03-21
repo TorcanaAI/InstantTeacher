@@ -1,23 +1,6 @@
-// InstantTeacher - App constants
+// InstantTeacher - Homework help with Sunshine & Jack
 
-export const SESSION_DURATIONS = [
-  { minutes: 15, label: "15 mins", priceCents: 3000, priceLabel: "$30" },
-  { minutes: 30, label: "30 mins", priceCents: 5500, priceLabel: "$55" },
-  { minutes: 60, label: "60 mins", priceCents: 9000, priceLabel: "$90" },
-] as const;
-
-export const PLATFORM_FEE_PERCENT = 25;
-export const TEACHER_PAYOUT_PERCENT = 75;
-
-export const HELP_TYPES = [
-  "One question / stuck",
-  "Concept explanation",
-  "Homework review",
-  "Exam prep",
-  "Essay feedback",
-] as const;
-
-// Only these 4 subjects. Used in UI and matching.
+// Subjects for homework and exam prep
 export const SUBJECTS = [
   "English",
   "Mathematics",
@@ -29,34 +12,46 @@ export type SubjectKey = (typeof SUBJECTS)[number];
 
 export const SUBJECT_DESCRIPTIONS: Record<SubjectKey, string> = {
   English: "Reading, writing, comprehension, and essay skills.",
-  Mathematics: "Homework support, problem-solving, and exam prep for all levels.",
-  HASS: "Humanities and Social Sciences — civics, history, geography, and critical thinking.",
+  Mathematics: "Homework support, problem-solving, and exam prep.",
+  HASS: "Humanities and Social Sciences — civics, history, geography.",
   Science: "General science, experiments, and exam preparation.",
 };
 
-// Section type: NAPLAN (Years 3, 5, 7, 9) or ATAR (Years 10–12). Stored on session request.
-export const SECTION_TYPES = ["NAPLAN", "ATAR"] as const;
-export type SectionType = (typeof SECTION_TYPES)[number];
-
-// Year options per section (used on /help/naplan and /help/atar).
-export const NAPLAN_YEARS = [3, 5, 7, 9] as const;
-export const ATAR_YEARS = [10, 11, 12] as const;
-
 export const YEAR_LEVELS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
-
-export const TEACHER_JOIN_SLA_MINUTES = 3;
-export const STUDENT_NO_SHOW_WAIT_MINUTES = 5;
-export const MATCH_TIMEOUT_SECONDS = 30;
-export const MATCH_EXTENDED_TIMEOUT_SECONDS = 120;
-
 export const DEFAULT_TIMEZONE = "Australia/Perth";
 
-// ============ INSTANT SUNSHINE CHILD ============
-export const SUNSHINE_QUESTION_BLOCK_SIZE = 5;
-export const SUNSHINE_QUESTION_BLOCK_PRICE_CENTS = 500; // $5
-export const SUNSHINE_READING_SESSION_PRICE_CENTS = 1000; // $10
-export const SUNSHINE_READING_YEARS = [1, 2, 3, 4, 5] as const; // Years 1-5 only
+// ============ HOMEWORK HELP PRICING ============
+export const HOMEWORK_SESSION_MINUTES = 15;
+export const HOMEWORK_SESSION_PRICE_CENTS = 700; // $7 per 15 min session
+export const SUBSCRIPTION_WEEKLY_PRICE_CENTS = 1000; // $10/week — unlimited sessions
+export const SUBSCRIPTION_MONTHLY_PRICE_CENTS = 3000; // $30/month — unlimited sessions
 
-/** User-facing description for Sunshine (live reading correction + Q&A). */
-export const SUNSHINE_DESCRIPTION =
-  "Sunshine listens while you read aloud, gives gentle corrections, and asks comprehension questions at the end. Hello, my name is Sunshine — ask me a question or let's read a book together. Pay-as-you-go, no subscription.";
+export const PANIC_BUTTON_RESPONSE =
+  "Hey, take a breath. You're not alone. Let's slow down together. Whatever you're facing, it's okay to ask for help. If you're feeling overwhelmed, it might really help to talk to a parent, teacher, or someone you trust.";
+
+export const BADGES = [
+  { id: "first_question", name: "First Question", emoji: "⭐", description: "Asked your first question" },
+  { id: "homework_hero", name: "Homework Hero", emoji: "📚", description: "Asked 10 questions" },
+  { id: "streak_7", name: "7 Day Streak", emoji: "🔥", description: "Studied for 7 days in a row" },
+  { id: "exam_crusher", name: "Exam Crusher", emoji: "🧠", description: "Completed 20 exam questions" },
+  { id: "naplan_ninja", name: "NAPLAN Ninja", emoji: "⚡", description: "Completed a practice test" },
+] as const;
+
+export type BadgeId = (typeof BADGES)[number]["id"];
+
+export const FIRST_QUESTION_COUNT = 1;
+export const HOMEWORK_HERO_COUNT = 10;
+export const STREAK_BADGE_DAYS = 7;
+export const EXAM_CRUSHER_COUNT = 20;
+
+/** Sunshine's profile image (koala character). */
+export const SUNSHINE_AVATAR_URL = "/sunshine.png";
+
+export const SUNSHINE_INTRODUCTION =
+  "Hi! I'm Sunshine — I love helping with homework. I'll take it step by step and cheer you on. Ask me anything!";
+
+/** Jack's profile image (kangaroo character). */
+export const JACK_AVATAR_URL = "/jack.png";
+
+export const JACK_INTRODUCTION =
+  "Hey! I'm Jack — I'm here to break things down and keep you going. Let's tackle this step by step. Ready when you are!";

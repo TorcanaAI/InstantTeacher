@@ -16,13 +16,13 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 px-4">
-      <h1 className="text-xl font-semibold text-slate-900">Something went wrong</h1>
-      <p className="max-w-md text-center text-sm text-slate-600">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
+      <h1 className="text-xl font-semibold text-foreground">Something went wrong</h1>
+      <p className="max-w-md text-center text-sm text-muted-foreground">
         A server error occurred. This is often due to a missing or incorrect environment variable
         (e.g. DATABASE_URL, AUTH_SECRET, NEXTAUTH_URL) in production.
       </p>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         Digest: {error.digest ?? "—"} (check server logs for details)
       </p>
       <div className="flex gap-3">

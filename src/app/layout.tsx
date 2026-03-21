@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Providers } from "./providers";
-import SupportFooter from "@/components/SupportFooter";
+import SiteFooter from "@/components/SiteFooter";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -16,10 +16,11 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "InstantTeacher | On-Demand Tutoring in WA",
+  title: "InstantTeacher | Homework Help & Exam Prep",
   description:
-    "Connect instantly with qualified educators for homework help and exam prep. No subscription. Australia.",
+    "24/7 homework help, school support and exam prep with Sunshine and Jack. Step-by-step help, practice tests, streaks and badges. Australia.",
   manifest: "/manifest.json",
+  icons: { icon: "/logo.png", apple: "/logo.png" },
 };
 
 export const viewport: Viewport = {
@@ -42,7 +43,7 @@ export default function RootLayout({
           <Providers>
             <main className="flex-1">{children}</main>
           </Providers>
-          <SupportFooter />
+          <SiteFooter />
         </div>
       </body>
     </html>

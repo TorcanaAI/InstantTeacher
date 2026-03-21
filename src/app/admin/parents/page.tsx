@@ -38,12 +38,12 @@ export default function ParentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/admin/dashboard" className="text-sm text-slate-600 hover:text-slate-900">
-          ← Admin
+        <Link href="/admin/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Dashboard
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">Parent Registrations</h1>
+        <h1 className="mt-2 text-3xl font-bold text-foreground">Parent registrations</h1>
         <p className="mt-1 text-muted-foreground">
-          Parents and their linked children (students). No payment data here.
+          Parents and their linked children (students).
         </p>
       </div>
 
@@ -53,21 +53,21 @@ export default function ParentsPage() {
         </p>
       )}
 
-      <Button asChild className="mb-4">
+      <Button asChild className="mb-4 rounded-full">
         <a href="/api/admin/export-parents">Export CSV</a>
       </Button>
 
-      <Card>
+      <Card className="border-2 border-border">
         <CardHeader>
-          <CardTitle>Parents</CardTitle>
+          <CardTitle className="text-foreground">Parents</CardTitle>
           <CardDescription>All registered parents and their children.</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <p className="text-muted-foreground">Loading…</p>
           ) : parents.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
-              <p className="font-medium text-slate-700">No parent registrations yet</p>
+            <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-8 text-center">
+              <p className="font-medium text-foreground">No parent registrations yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Parents will appear here after they sign up and add their children.
               </p>
@@ -75,8 +75,8 @@ export default function ParentsPage() {
           ) : (
             <ul className="space-y-4">
               {parents.map((p) => (
-                <li key={p.id} className="rounded-lg border p-4">
-                  <div className="font-semibold">{p.name}</div>
+                <li key={p.id} className="rounded-xl border-2 border-border bg-card p-4">
+                  <div className="font-semibold text-foreground">{p.name}</div>
                   <div className="text-sm text-muted-foreground">Email: {p.email}</div>
                   <div className="text-sm text-muted-foreground">Phone: {p.phone ?? "—"}</div>
                   <div className="mt-2">

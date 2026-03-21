@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
+import { HOMEWORK_SESSION_MINUTES } from "@/lib/constants";
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -30,99 +31,91 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
+    const raw = event.data.object as {
+      id: string;
+      metadata?: { userId?: string; trialCouponId?: string };
+      items?: { data?: Array<{ price?: { id?: string; recurring?: { interval?: string } } }> };
+      status?: string;
+      current_period_end?: number;
+    };
+    const userId = raw.metadata?.userId;
+    if (!userId) return NextResponse.json({ received: true });
+    const plan = raw.items?.data?.[0]?.price?.recurring?.interval === "month" ? "MONTHLY" : "WEEKLY";
+    const currentPeriodEnd =
+      typeof raw.current_period_end === "number"
+        ? new Date(raw.current_period_end * 1000)
+        : null;
+    const stripeStatus = raw.status ?? "";
+    const status =
+      stripeStatus === "active" || stripeStatus === "trialing"
+        ? "ACTIVE"
+        : stripeStatus === "past_due"
+          ? "PAST_DUE"
+          : "CANCELED";
+
+    const trialCouponId = raw.metadata?.trialCouponId;
+    if (trialCouponId && event.type === "customer.subscription.created") {
+      await prisma.trialCoupon.updateMany({
+        where: { id: trialCouponId, usedAt: null },
+        data: { usedAt: new Date(), usedByUserId: userId },
+      });
+    }
+
+    await prisma.subscription.upsert({
+      where: { userId },
+      create: {
+        userId,
+        stripeSubscriptionId: raw.id,
+        stripePriceId: raw.items?.data?.[0]?.price?.id ?? null,
+        plan,
+        status,
+        currentPeriodEnd,
+      },
+      update: {
+        stripeSubscriptionId: raw.id,
+        stripePriceId: raw.items?.data?.[0]?.price?.id ?? null,
+        plan,
+        status,
+        currentPeriodEnd,
+      },
+    });
+    return NextResponse.json({ received: true });
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const raw = event.data.object as { id: string };
+    await prisma.subscription.updateMany({
+      where: { stripeSubscriptionId: raw.id },
+      data: { status: "CANCELED" },
+    });
+    return NextResponse.json({ received: true });
+  }
+
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object as Stripe.PaymentIntent;
     const meta = paymentIntent.metadata || {};
     const type = meta.type;
 
-    // Instant Sunshine: question block ($5) or reading session ($10)
-    if (type === "sunshine_question_block") {
-      const studentId = meta.studentId;
-      const requestedByUserId = meta.requestedByUserId;
-      if (studentId && requestedByUserId) {
-        await prisma.sunshineQuestionBlock.create({
-          data: {
-            studentId,
-            requestedByUserId,
-            stripePaymentIntentId: paymentIntent.id,
-            questionsTotal: 5,
-            questionsRemaining: 5,
-            amountCents: 500,
-          },
+    if (type === "homework_session") {
+      const homeworkSession = await prisma.homeworkSession.findFirst({
+        where: { stripePaymentIntentId: paymentIntent.id },
+      });
+      if (homeworkSession) {
+        const now = new Date();
+        const endsAt = new Date(now.getTime() + HOMEWORK_SESSION_MINUTES * 60 * 1000);
+        await prisma.homeworkSession.update({
+          where: { id: homeworkSession.id },
+          data: { status: "ACTIVE", startedAt: now, endsAt },
         });
       }
-      return NextResponse.json({ received: true });
     }
-    if (type === "sunshine_reading_session") {
-      const studentId = meta.studentId;
-      const requestedByUserId = meta.requestedByUserId;
-      if (studentId && requestedByUserId) {
-        await prisma.sunshineReadingSession.updateMany({
-          where: {
-            studentId,
-            requestedByUserId,
-            status: "PENDING_PAYMENT",
-            stripePaymentIntentId: paymentIntent.id,
-          },
-          data: { status: "PAID" },
-        });
-      }
-      return NextResponse.json({ received: true });
-    }
-
-    // Extension payment (handled in extendSession action)
-    if (type === "extension") {
-      return NextResponse.json({ received: true });
-    }
-
-    // Regular tutoring session payment
-    const tutoringSessionId = meta.tutoringSessionId;
-    if (!tutoringSessionId) {
-      return NextResponse.json({ received: true });
-    }
-
-    let paymentMethodId: string | null = null;
-    if (paymentIntent.payment_method && typeof paymentIntent.payment_method === "string") {
-      paymentMethodId = paymentIntent.payment_method;
-    } else if (paymentIntent.payment_method && typeof paymentIntent.payment_method === "object") {
-      paymentMethodId = (paymentIntent.payment_method as Stripe.PaymentMethod).id;
-    }
-
-    const allowsIncrementalCharges = meta.allowsIncrementalCharges === "true";
-    await prisma.tutoringSession.update({
-      where: { id: tutoringSessionId },
-      data: {
-        status: "PAID",
-        ...(allowsIncrementalCharges && paymentMethodId
-          ? { stripePaymentMethodId: paymentMethodId }
-          : {}),
-      },
-    });
 
     return NextResponse.json({ received: true });
   }
 
   if (event.type === "payment_intent.payment_failed") {
-    const paymentIntent = event.data.object as Stripe.PaymentIntent;
-    const meta = paymentIntent.metadata || {};
-    if (meta.type === "sunshine_reading_session" && meta.studentId && meta.requestedByUserId) {
-      await prisma.sunshineReadingSession.updateMany({
-        where: {
-          studentId: meta.studentId,
-          requestedByUserId: meta.requestedByUserId,
-          stripePaymentIntentId: paymentIntent.id,
-          status: "PENDING_PAYMENT",
-        },
-        data: { status: "PENDING_PAYMENT" }, // leave as is; no record may exist yet
-      });
-    }
-    const tutoringSessionId = meta.tutoringSessionId;
-    if (tutoringSessionId) {
-      await prisma.tutoringSession.update({
-        where: { id: tutoringSessionId },
-        data: { status: "CANCELLED" },
-      });
-    }
+    // Optional: log or handle failed homework_session if needed
   }
 
   return NextResponse.json({ received: true });
