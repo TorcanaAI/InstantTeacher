@@ -26,6 +26,7 @@ function getApiKey(): string {
   return key;
 }
 
+// Shared ElevenLabs voice_settings — Jack uses the same tuning as Sunshine (only the voice ID differs).
 const SUNSHINE_SETTINGS = {
   stability: 0.42,
   similarity_boost: 0.72,
@@ -34,15 +35,7 @@ const SUNSHINE_SETTINGS = {
   speed: 1.04,
 };
 
-// Tuned for conversational delivery: lower stability = less monotone; higher style = more expressive;
-// slightly slower speed = easier to follow (less "robotic").
-const JACK_SETTINGS = {
-  stability: 0.38,
-  similarity_boost: 0.68,
-  style: 0.42,
-  use_speaker_boost: true,
-  speed: 0.96,
-};
+const JACK_SETTINGS = { ...SUNSHINE_SETTINGS };
 
 export async function generateSunshineSpeech(text: string): Promise<ArrayBuffer> {
   return generateAssistantSpeech(text, "SUNSHINE");
