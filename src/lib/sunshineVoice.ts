@@ -3,7 +3,8 @@
  * No audio stored. All speech uses the locked voice ID (no frontend override).
  */
 
-import { generateSunshineSpeech } from "./sunshineTTS";
+import { getAssistantResponse } from "./assistant";
+import { generateAssistantSpeech, generateSunshineSpeech } from "./sunshineTTS";
 
 /**
  * Generate a short, supportive answer using OpenAI then return audio stream.
@@ -58,4 +59,29 @@ export function requireSunshineVoiceEnv(): void {
   if (!process.env.ELEVENLABS_API_KEY) {
     throw new Error("Sunshine voice not configured. Set ELEVENLABS_API_KEY in .env or Vercel.");
   }
+}
+
+/**
+ * Jack: same pipeline as homework help — OpenAI tutor answer + locked Jack ElevenLabs voice.
+ * Used for admin "Ask Jack" tests (not TTS-only).
+ */
+export async function jackAnswerStream(
+  question: string,
+  subject: string
+): Promise<ReadableStream<Uint8Array>> {
+  const openAiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!openAiKey) {
+    throw new Error("Jack voice not configured. Set OPENAI_API_KEY in .env or Vercel.");
+  }
+  requireSunshineVoiceEnv();
+
+  const generatedText = await getAssistantResponse(
+    [{ role: "user", content: question }],
+    "JACK",
+    { subject: subject?.trim() || undefined }
+  );
+
+  const audio = await generateAssistantSpeech(generatedText, "JACK");
+  return new Response(audio, { headers: { "Content-Type": "audio/mpeg" } })
+    .body as ReadableStream<Uint8Array>;
 }

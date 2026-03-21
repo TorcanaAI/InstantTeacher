@@ -5,6 +5,27 @@
 
 export type AssistantType = "SUNSHINE" | "JACK";
 
+/** Normalize DB/API values so Jack sessions always use Jack prompts (never default wrong). */
+export function normalizeAssistantType(value: string): AssistantType {
+  const u = value.trim().toUpperCase();
+  return u === "SUNSHINE" ? "SUNSHINE" : "JACK";
+}
+
+/** HomeworkSessionMessage.role is USER | ASSISTANT (any casing). */
+export function dbMessageRoleToChatRole(role: string): "user" | "assistant" {
+  return role.trim().toUpperCase() === "ASSISTANT" ? "assistant" : "user";
+}
+
+function isLikelyEchoOfUserMessage(assistantText: string, lastUserContent: string): boolean {
+  const a = assistantText.trim().toLowerCase().replace(/\s+/g, " ");
+  const u = lastUserContent.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!a || !u) return false;
+  if (a === u) return true;
+  const strip = (s: string) => s.replace(/[?.!"""''`]/g, "").trim();
+  if (strip(a) === strip(u)) return true;
+  return false;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -48,7 +69,7 @@ function getSystemPrompt(assistant: AssistantType, subject?: string): string {
 
 export async function getAssistantResponse(
   messages: ChatMessage[],
-  assistantType: AssistantType,
+  assistantType: AssistantType | string,
   options?: {
     subject?: string;
     streakMessage?: string;
@@ -60,9 +81,11 @@ export async function getAssistantResponse(
     throw new Error("Assistant not configured. Set OPENAI_API_KEY.");
   }
 
+  const assistant = normalizeAssistantType(String(assistantType));
+
   const { subject, streakMessage, isPanic } = options ?? {};
 
-  let systemContent = getSystemPrompt(assistantType, subject);
+  let systemContent = getSystemPrompt(assistant, subject);
   if (streakMessage) {
     systemContent += `\n\nIf the user just extended their learning streak, you may briefly celebrate it in your response. Example (Sunshine): "Amazing work! That's a 4-day learning streak!" Example (Jack): "Boom! That's your 5-day streak. Keep it going!" Only mention the streak once if it fits naturally.`;
   }
@@ -70,6 +93,8 @@ export async function getAssistantResponse(
     // Override: return calming message only (handled by caller with PANIC_BUTTON_RESPONSE)
     return "";
   }
+
+  const lastUserForEchoCheck = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
   const apiMessages: Array<{ role: "system" | "user" | "assistant"; content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> }> = [
     { role: "system", content: systemContent },
@@ -102,9 +127,11 @@ export async function getAssistantResponse(
   const timeoutMs = 60_000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  let res: Response;
-  try {
-    res = await fetch("https://api.openai.com/v1/chat/completions", {
+  async function callOpenAI(
+    msgs: typeof apiMessages,
+    temperature: number
+  ): Promise<Response> {
+    return fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${openAiKey}`,
@@ -113,11 +140,16 @@ export async function getAssistantResponse(
       signal: controller.signal,
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages: apiMessages,
+        messages: msgs,
         max_tokens: 4096,
-        temperature: 0.35,
+        temperature,
       }),
     });
+  }
+
+  let res: Response;
+  try {
+    res = await callOpenAI(apiMessages, assistant === "JACK" ? 0.55 : 0.35);
   } catch (e) {
     clearTimeout(timeoutId);
     if (e instanceof Error && e.name === "AbortError") {
@@ -135,12 +167,60 @@ export async function getAssistantResponse(
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string | null } }>;
   };
-  const raw = data.choices?.[0]?.message?.content;
-  const text = typeof raw === "string" ? raw.trim() : "";
+  let raw = data.choices?.[0]?.message?.content;
+  let text = typeof raw === "string" ? raw.trim() : "";
+
   const fallback =
-    assistantType === "SUNSHINE"
+    assistant === "SUNSHINE"
       ? "I'm not sure how to answer that. Can you tell me more about what you're stuck on?"
       : "Not quite sure on that one — give me a bit more detail and we'll get there.";
+
+  if (
+    text.length > 0 &&
+    lastUserForEchoCheck &&
+    isLikelyEchoOfUserMessage(text, lastUserForEchoCheck)
+  ) {
+    const retryMessages = [
+      ...apiMessages,
+      { role: "assistant" as const, content: text },
+      {
+        role: "user" as const,
+        content:
+          "Your last reply repeated or only restated my question. Do not read my message back. Give a direct, helpful answer: explain the idea, show steps or reasoning, and check my understanding.",
+      },
+    ];
+    const retryController = new AbortController();
+    const retryTimeout = setTimeout(() => retryController.abort(), timeoutMs);
+    try {
+      const retryRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openAiKey}`,
+          "Content-Type": "application/json",
+        },
+        signal: retryController.signal,
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: retryMessages,
+          max_tokens: 4096,
+          temperature: 0.65,
+        }),
+      });
+      if (retryRes.ok) {
+        const retryData = (await retryRes.json()) as {
+          choices?: Array<{ message?: { content?: string | null } }>;
+        };
+        const r = retryData.choices?.[0]?.message?.content;
+        const t = typeof r === "string" ? r.trim() : "";
+        if (t.length > 0 && !isLikelyEchoOfUserMessage(t, lastUserForEchoCheck)) {
+          text = t;
+        }
+      }
+    } finally {
+      clearTimeout(retryTimeout);
+    }
+  }
+
   // Empty string from the API must use fallback (?? only catches null/undefined).
   return text.length > 0 ? text : fallback;
 }

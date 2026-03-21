@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getAssistantResponse } from "@/lib/assistant";
+import { dbMessageRoleToChatRole, getAssistantResponse } from "@/lib/assistant";
 import { updateStreak, checkBadges, countQuestionsAsked } from "@/lib/streaks-badges";
 import { PANIC_BUTTON_RESPONSE } from "@/lib/constants";
 
@@ -80,7 +80,7 @@ export async function POST(
       assistantText = PANIC_BUTTON_RESPONSE;
     } else {
       const chatMessages = homeworkSession.messages.map((m) => ({
-        role: m.role.toLowerCase() as "user" | "assistant",
+        role: dbMessageRoleToChatRole(m.role),
         content: m.content,
         imageUrl: m.imageUrl ?? undefined,
       }));

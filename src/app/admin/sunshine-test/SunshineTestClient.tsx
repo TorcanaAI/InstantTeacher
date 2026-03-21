@@ -15,6 +15,8 @@ export default function SunshineTestClient() {
   const [askQuestion, setAskQuestion] = useState("What is the capital of Australia?");
   const [askSubject, setAskSubject] = useState("English");
   const [jackSpeakText, setJackSpeakText] = useState("Nice one! Let's break this down step by step.");
+  const [jackAskQuestion, setJackAskQuestion] = useState("What is the capital of Australia?");
+  const [jackAskSubject, setJackAskSubject] = useState("English");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -74,6 +76,31 @@ export default function SunshineTestClient() {
       await playAudioFromResponse(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ask Sunshine failed");
+    }
+    setLoading(false);
+  }
+
+  async function handleJackAsk() {
+    const question = jackAskQuestion.trim();
+    if (!question) {
+      setError("Enter a question for Jack.");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/assistant/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          subject: jackAskSubject,
+          assistant: "JACK",
+        }),
+      });
+      await playAudioFromResponse(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ask Jack failed");
     }
     setLoading(false);
   }
@@ -209,39 +236,87 @@ export default function SunshineTestClient() {
       )}
 
       {tab === "jack" && (
-        <Card className="border-blue-200 bg-blue-50/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Zap className="h-5 w-5 text-blue-600" />
-              Test Jack (voice)
-            </CardTitle>
-            <CardDescription>
-              Type text and hear it in Jack&apos;s voice (confident male). TTS only.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="jack-text">Text for Jack</Label>
-              <textarea
-                id="jack-text"
-                className="min-h-[100px] w-full rounded-lg border-2 border-blue-200 bg-white px-3 py-2 text-sm"
-                placeholder="e.g. Nice one! Let's break this down step by step."
-                value={jackSpeakText}
-                onChange={(e) => setJackSpeakText(e.target.value)}
+        <div className="space-y-6">
+          <Card className="border-blue-200 bg-blue-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MessageCircle className="h-5 w-5 text-blue-600" />
+                Ask Jack
+              </CardTitle>
+              <CardDescription>
+                Ask a question; Jack answers with OpenAI (same homework tutor as parents) + Jack&apos;s voice.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="jack-ask-subject">Subject</Label>
+                <Input
+                  id="jack-ask-subject"
+                  className="max-w-xs"
+                  value={jackAskSubject}
+                  onChange={(e) => setJackAskSubject(e.target.value)}
+                  placeholder="English"
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="jack-ask-question">Question</Label>
+                <textarea
+                  id="jack-ask-question"
+                  className="min-h-[80px] w-full rounded-lg border-2 border-blue-200 bg-white px-3 py-2 text-sm"
+                  placeholder="e.g. What is photosynthesis?"
+                  value={jackAskQuestion}
+                  onChange={(e) => setJackAskQuestion(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <Button
+                type="button"
+                className="bg-blue-500 hover:bg-blue-600"
+                onClick={handleJackAsk}
                 disabled={loading}
-              />
-            </div>
-            <Button
-              type="button"
-              className="bg-blue-500 hover:bg-blue-600"
-              onClick={handleJackSpeak}
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Volume2 className="mr-2 h-4 w-4" />}
-              Jack speak
-            </Button>
-          </CardContent>
-        </Card>
+              >
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                Ask Jack
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 bg-slate-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Volume2 className="h-5 w-5 text-slate-600" />
+                Jack: type &amp; speak (TTS only)
+              </CardTitle>
+              <CardDescription>
+                Reads your text aloud — no OpenAI. Use &quot;Ask Jack&quot; above to test real answers.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="jack-text">Text for Jack to read</Label>
+                <textarea
+                  id="jack-text"
+                  className="min-h-[100px] w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm"
+                  placeholder="e.g. Nice one! Let's break this down step by step."
+                  value={jackSpeakText}
+                  onChange={(e) => setJackSpeakText(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-blue-300 text-blue-800 hover:bg-blue-50"
+                onClick={handleJackSpeak}
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Volume2 className="mr-2 h-4 w-4" />}
+                Speak (TTS only)
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {error && (
