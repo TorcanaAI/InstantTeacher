@@ -138,8 +138,10 @@ export async function getAssistantResponse(
   }
 
   const controller = new AbortController();
-  const timeoutMs = 60_000;
+  /** Shorter timeout + lower max_tokens = faster time-to-first-byte for typical homework answers. */
+  const timeoutMs = 45_000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const maxTutorTokens = 2048;
 
   async function callOpenAI(
     msgs: typeof apiMessages,
@@ -155,7 +157,7 @@ export async function getAssistantResponse(
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: msgs,
-        max_tokens: 4096,
+        max_tokens: maxTutorTokens,
         temperature,
       }),
     });
@@ -217,7 +219,7 @@ export async function getAssistantResponse(
         body: JSON.stringify({
           model: "gpt-4o-mini",
           messages: retryMessages,
-          max_tokens: 4096,
+          max_tokens: maxTutorTokens,
           temperature: 0.65,
         }),
       });

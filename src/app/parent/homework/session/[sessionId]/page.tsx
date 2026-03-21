@@ -104,7 +104,10 @@ export default function HomeworkSessionPage() {
       ]);
       setInput("");
       if (panic) setPanicSent(true);
-      fetchSession();
+      // Defer refetch so the UI can paint the new messages first (doesn't block send latency).
+      queueMicrotask(() => {
+        void fetchSession();
+      });
     } finally {
       setSending(false);
     }

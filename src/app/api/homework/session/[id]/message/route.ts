@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { dbMessageRoleToChatRole, getAssistantResponse } from "@/lib/assistant";
@@ -90,21 +91,14 @@ export async function POST(
         imageUrl: imageUrl ?? undefined,
       });
 
-      const { newStreak, streakMessage } = await updateStreak(homeworkSession.studentId);
-      const totalQuestions = await countQuestionsAsked(homeworkSession.studentId);
-      await checkBadges(homeworkSession.studentId, {
-        totalQuestionsAsked: totalQuestions,
-        streakCurrent: newStreak,
-        examQuestionsCompleted: undefined,
-        completedPracticeTest: false,
-      });
-
+      // OpenAI first — do not block on streak/badge DB work (was adding hundreds of ms before the model ran).
+      // Streak celebration in the assistant text is skipped on this path for speed; badges update after respond.
       assistantText = await getAssistantResponse(
         chatMessages,
         homeworkSession.assistantType,
         {
           subject: homeworkSession.subject ?? undefined,
-          streakMessage: streakMessage ? `${newStreak}-day streak` : undefined,
+          streakMessage: undefined,
           isPanic: false,
         }
       );
@@ -117,6 +111,29 @@ export async function POST(
         content: assistantText,
       },
     });
+
+    // Gamification after the reply is saved — don't delay the JSON response.
+    if (!panic) {
+      const studentId = homeworkSession.studentId;
+      waitUntil(
+        (async () => {
+          try {
+            const [{ newStreak }, totalQuestions] = await Promise.all([
+              updateStreak(studentId),
+              countQuestionsAsked(studentId),
+            ]);
+            await checkBadges(studentId, {
+              totalQuestionsAsked: totalQuestions,
+              streakCurrent: newStreak,
+              examQuestionsCompleted: undefined,
+              completedPracticeTest: false,
+            });
+          } catch (e) {
+            console.error("Homework streak/badge after message:", e);
+          }
+        })()
+      );
+    }
 
     return NextResponse.json({
       message: {
