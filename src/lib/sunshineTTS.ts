@@ -5,8 +5,9 @@
  */
 
 const DEFAULT_SUNSHINE_VOICE_ID = "hpp4J3VqNfWAUOO0d1Us";
-// Josh – warm male (distinct from Sunshine’s female voice; override with ELEVENLABS_JACK_VOICE_ID)
-const DEFAULT_JACK_VOICE_ID = "TxGEqnHWrfWFTfGW9XjX";
+// Jack — ElevenLabs voice library (override with ELEVENLABS_JACK_VOICE_ID)
+// https://elevenlabs.io/app/agents/voice-library?voiceId=CbQryPGe1i0tLYfqq2b3
+const DEFAULT_JACK_VOICE_ID = "CbQryPGe1i0tLYfqq2b3";
 
 export type AssistantVoice = "SUNSHINE" | "JACK";
 
