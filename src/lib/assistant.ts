@@ -167,7 +167,7 @@ export async function getAssistantResponse(
   const data = (await res.json()) as {
     choices?: Array<{ message?: { content?: string | null } }>;
   };
-  let raw = data.choices?.[0]?.message?.content;
+  const raw = data.choices?.[0]?.message?.content;
   let text = typeof raw === "string" ? raw.trim() : "";
 
   const fallback =
