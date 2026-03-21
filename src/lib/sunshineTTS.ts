@@ -27,19 +27,21 @@ function getApiKey(): string {
 }
 
 const SUNSHINE_SETTINGS = {
-  stability: 0.45,
-  similarity_boost: 0.75,
-  style: 0.2,
+  stability: 0.42,
+  similarity_boost: 0.72,
+  style: 0.28,
   use_speaker_boost: true,
-  speed: 1.08,
+  speed: 1.04,
 };
 
+// Tuned for conversational delivery: lower stability = less monotone; higher style = more expressive;
+// slightly slower speed = easier to follow (less "robotic").
 const JACK_SETTINGS = {
-  stability: 0.48,
-  similarity_boost: 0.72,
-  style: 0.25,
+  stability: 0.38,
+  similarity_boost: 0.68,
+  style: 0.42,
   use_speaker_boost: true,
-  speed: 1.02,
+  speed: 0.96,
 };
 
 export async function generateSunshineSpeech(text: string): Promise<ArrayBuffer> {
