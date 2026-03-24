@@ -7,10 +7,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import Image from "next/image";
-import { Volume2, Loader2, ImagePlus, AlertCircle } from "lucide-react";
+import { Volume2, Loader2, ImagePlus, AlertCircle, Mic, MicOff } from "lucide-react";
 import { BADGES, SUNSHINE_AVATAR_URL, JACK_AVATAR_URL } from "@/lib/constants";
 
 type Message = { id: string; role: string; content: string; imageUrl?: string | null; createdAt: string };
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+};
 
 export default function HomeworkSessionPage() {
   const params = useParams();
@@ -29,8 +40,12 @@ export default function HomeworkSessionPage() {
   const [badges, setBadges] = useState<Array<{ badgeId: string; unlockedAt: string }>>([]);
   const [subject, setSubject] = useState<string | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const pendingVoiceTextRef = useRef<string>("");
 
   const fetchSession = useCallback(async () => {
     const res = await fetch(`/api/homework/session/${sessionId}`);
@@ -126,10 +141,57 @@ export default function HomeworkSessionPage() {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
-      sendMessage("Can you help me with this question?", dataUrl);
+      sendMessage("Please analyse this photo and help me solve the question step by step.", dataUrl);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
+  }
+
+  function startVoiceInput() {
+    const w = window as Window & {
+      SpeechRecognition?: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    };
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!Ctor) {
+      setVoiceError("Voice input is not supported in this browser. Please use Chrome or Edge.");
+      return;
+    }
+    if (listening) {
+      speechRecognitionRef.current?.stop();
+      return;
+    }
+
+    const recognition = new Ctor();
+    recognition.lang = "en-AU";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim() ?? "";
+      if (!transcript) return;
+      setVoiceError(null);
+      pendingVoiceTextRef.current = transcript;
+      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+    };
+    recognition.onerror = (event) => {
+      if (event?.error && event.error !== "no-speech" && event.error !== "aborted") {
+        setVoiceError("Could not capture voice input. Please try again.");
+      }
+      setListening(false);
+    };
+    recognition.onend = () => {
+      setListening(false);
+      const transcript = pendingVoiceTextRef.current.trim();
+      pendingVoiceTextRef.current = "";
+      if (!transcript || sending || status !== "ACTIVE") return;
+      // Hands-free mode: auto-send captured speech.
+      void sendMessage(transcript);
+    };
+    speechRecognitionRef.current = recognition;
+    setListening(true);
+    setVoiceError(null);
+    recognition.start();
   }
 
   async function playSpeech(text: string) {
@@ -281,6 +343,16 @@ export default function HomeworkSessionPage() {
             >
               <ImagePlus className="h-4 w-4" />
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={startVoiceInput}
+              disabled={sending}
+              title={listening ? "Stop voice input" : "Start voice input"}
+            >
+              {listening ? <MicOff className="h-4 w-4 text-red-500" /> : <Mic className="h-4 w-4" />}
+            </Button>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -292,6 +364,15 @@ export default function HomeworkSessionPage() {
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
             </Button>
           </form>
+          <div className="mt-2 min-h-5 text-center text-xs">
+            {listening ? (
+              <span className="inline-flex items-center gap-1 text-blue-700">
+                <Mic className="h-3.5 w-3.5 animate-pulse" /> Listening...
+              </span>
+            ) : voiceError ? (
+              <span className="text-red-600">{voiceError}</span>
+            ) : null}
+          </div>
           <div className="mt-2 flex justify-center">
             <Button
               type="button"

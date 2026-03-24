@@ -12,7 +12,8 @@ import { generateAssistantSpeech, generateSunshineSpeech } from "./sunshineTTS";
  */
 export async function sunshineAnswerStream(
   question: string,
-  subject: string
+  subject: string,
+  imageUrl?: string
 ): Promise<ReadableStream<Uint8Array>> {
   const openAiKey = process.env.OPENAI_API_KEY?.trim();
   if (!openAiKey) {
@@ -21,7 +22,7 @@ export async function sunshineAnswerStream(
   requireSunshineVoiceEnv();
 
   const generatedText = await getAssistantResponse(
-    [{ role: "user", content: question }],
+    [{ role: "user", content: question, imageUrl }],
     "SUNSHINE",
     { subject: subject?.trim() || undefined }
   );
@@ -43,7 +44,8 @@ export function requireSunshineVoiceEnv(): void {
  */
 export async function jackAnswerStream(
   question: string,
-  subject: string
+  subject: string,
+  imageUrl?: string
 ): Promise<ReadableStream<Uint8Array>> {
   const openAiKey = process.env.OPENAI_API_KEY?.trim();
   if (!openAiKey) {
@@ -52,7 +54,7 @@ export async function jackAnswerStream(
   requireSunshineVoiceEnv();
 
   const generatedText = await getAssistantResponse(
-    [{ role: "user", content: question }],
+    [{ role: "user", content: question, imageUrl }],
     "JACK",
     { subject: subject?.trim() || undefined }
   );

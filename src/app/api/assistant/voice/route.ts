@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST: OpenAI answer + ElevenLabs (Sunshine or Jack). Admin-only for testing.
- * Body: { question: string, subject?: string, assistant?: "SUNSHINE" | "JACK" }
+ * Body: { question: string, subject?: string, imageUrl?: string, assistant?: "SUNSHINE" | "JACK" }
  * Returns: audio/mpeg stream.
  */
 export async function POST(req: Request) {
@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       subject?: string;
       question?: string;
+      imageUrl?: string;
       assistant?: string;
     };
     const questionText = (body.question ?? "").trim();
@@ -36,11 +37,14 @@ export async function POST(req: Request) {
     }
 
     const assistant = body.assistant === "JACK" ? "JACK" : "SUNSHINE";
+    const imageUrl = typeof body.imageUrl === "string" && body.imageUrl.trim()
+      ? body.imageUrl.trim()
+      : undefined;
 
     const audioStream =
       assistant === "JACK"
-        ? await jackAnswerStream(questionText, subject)
-        : await sunshineAnswerStream(questionText, subject);
+        ? await jackAnswerStream(questionText, subject, imageUrl)
+        : await sunshineAnswerStream(questionText, subject, imageUrl);
 
     return new Response(audioStream, {
       headers: {
