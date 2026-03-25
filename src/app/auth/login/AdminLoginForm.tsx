@@ -50,7 +50,13 @@ export default function AdminLoginForm() {
     }
   }, [searchParams]);
 
-  const error = state?.error ?? urlError;
+  useEffect(() => {
+    if (state && "success" in state && state.success && state.redirectTo) {
+      window.location.assign(state.redirectTo);
+    }
+  }, [state]);
+
+  const error = state && "error" in state ? state.error : urlError;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">

@@ -46,7 +46,13 @@ export default function LoginForm() {
     }
   }, [searchParams]);
 
-  const error = state?.error ?? urlError;
+  useEffect(() => {
+    if (state && "success" in state && state.success && state.redirectTo) {
+      window.location.assign(state.redirectTo);
+    }
+  }, [state]);
+
+  const error = state && "error" in state ? state.error : urlError;
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-12">
