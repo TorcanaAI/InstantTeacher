@@ -304,6 +304,36 @@ async function main() {
       CREATE UNIQUE INDEX IF NOT EXISTS "StudentProfile_userId_key" ON "StudentProfile"("userId");
     `);
 
+    // StudentBadge (parent dashboard includes students with badges relation)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "StudentBadge" (
+        "id" TEXT NOT NULL,
+        "studentId" TEXT NOT NULL,
+        "badgeId" TEXT NOT NULL,
+        "unlockedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "StudentBadge_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "StudentBadge_studentId_idx" ON "StudentBadge"("studentId");
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "StudentBadge_studentId_badgeId_key"
+      ON "StudentBadge"("studentId", "badgeId");
+    `);
+    await prisma.$executeRawUnsafe(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'StudentBadge_studentId_fkey'
+        ) THEN
+          ALTER TABLE "StudentBadge"
+          ADD CONSTRAINT "StudentBadge_studentId_fkey"
+          FOREIGN KEY ("studentId") REFERENCES "StudentProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        END IF;
+      END $$;
+    `);
+
     console.log("[build] DB init complete.");
 
     // Keep admin, trial codes, and seeded parent accounts in sync with Vercel's DATABASE_URL.
