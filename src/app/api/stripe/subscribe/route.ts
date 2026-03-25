@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeTrialCode } from "@/lib/trialCoupon";
+import { validateTrialForCheckout } from "@/lib/trialCheckout";
 import Stripe from "stripe";
-
-const TRIAL_DAYS = 7;
 
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -36,15 +35,12 @@ export async function POST(req: Request) {
     const rawTrial = (body.trialCode ?? "").trim();
     if (rawTrial) {
       const code = normalizeTrialCode(rawTrial);
-      const coupon = await prisma.trialCoupon.findUnique({ where: { code } });
-      if (!coupon || coupon.usedAt) {
-        return NextResponse.json(
-          { error: "That trial code is not valid or has already been used." },
-          { status: 400 }
-        );
+      const trialCheck = await validateTrialForCheckout(session.user.id, code);
+      if (!trialCheck.ok) {
+        return NextResponse.json({ error: trialCheck.message }, { status: 400 });
       }
-      trialCouponId = coupon.id;
-      trialPeriodDays = TRIAL_DAYS;
+      trialCouponId = trialCheck.coupon.id;
+      trialPeriodDays = trialCheck.coupon.expiryDays;
     }
 
     const parent = await prisma.parentProfile.findUnique({

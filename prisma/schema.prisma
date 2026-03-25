@@ -74,6 +74,7 @@ model User {
   studentProfile   StudentProfile?
   homeworkSessionsRequested HomeworkSession[] @relation("HomeworkRequestedBy")
   subscription Subscription?
+  trialCodeRedemptions TrialCodeRedemption[]
 }
 
 // ============ PARENT ============
@@ -207,15 +208,39 @@ model StudentBadge {
   @@index([studentId])
 }
 
-// Admin-created one-time codes: 7-day Stripe trial on first subscription checkout
+// Club / campaign trial codes: shared cap, 1 redemption per account, 1 per payment method
 model TrialCoupon {
-  id             String    @id @default(cuid())
-  code           String    @unique // normalized UPPERCASE, no spaces
-  referenceNote  String?   @db.Text
-  createdAt      DateTime  @default(now())
-  usedAt         DateTime?
-  usedByUserId   String?
+  id            String    @id @default(cuid())
+  code          String    @unique // normalized UPPERCASE, no spaces
+  referenceNote String?   @db.Text
+  maxUses       Int       @default(1)
+  usedCount     Int       @default(0)
+  expiryDays    Int       @default(7) // trial length per redemption (Stripe trial_period_days)
+  createdAt     DateTime  @default(now())
+  // Legacy single-use fields (pre–multi-use); kept for display / migration
+  usedAt        DateTime?
+  usedByUserId  String?
+
+  redemptions TrialCodeRedemption[]
 
   @@index([code])
-  @@index([usedAt])
+}
+
+model TrialCodeRedemption {
+  id                   String   @id @default(cuid())
+  trialCouponId        String
+  userId               String
+  paymentMethodId      String   // Stripe pm_… (or synthetic if unavailable)
+  redeemedAt           DateTime @default(now())
+  trialEndDate         DateTime
+  stripeSubscriptionId String?  @unique
+
+  trialCoupon TrialCoupon @relation(fields: [trialCouponId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([trialCouponId, userId])
+  @@unique([trialCouponId, paymentMethodId])
+  @@index([trialCouponId])
+  @@index([userId])
+  @@index([paymentMethodId])
 }

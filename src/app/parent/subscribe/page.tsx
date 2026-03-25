@@ -65,8 +65,8 @@ export default function ParentSubscribePage() {
               autoComplete="off"
             />
             <p className="text-xs text-muted-foreground">
-              If you have a code from Instant Teacher, enter it here for a <strong>7-day free trial</strong>. Each
-              code can only be used once.
+              Club codes are shared: each code has a set number of uses. You can redeem a code once per account; the
+              same card cannot be used twice with that code. Trial runs for <strong>7 days</strong> from checkout.
             </p>
           </div>
           <div className="grid gap-3">

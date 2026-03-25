@@ -77,6 +77,46 @@ async function main() {
   } else {
     console.log("Test Student (Sunshine) already exists");
   }
+
+  const clubTrials = [
+    {
+      code: "INSTANT-CNC",
+      referenceNote: "Currambine Netball Club",
+      maxUses: 250,
+      expiryDays: 7,
+    },
+    {
+      code: "INSTANT-WDRU",
+      referenceNote: "Wanneroo District Rugby Club",
+      maxUses: 350,
+      expiryDays: 7,
+    },
+    {
+      code: "INSTANT-HNC",
+      referenceNote: "Hocking Netball Club",
+      maxUses: 250,
+      expiryDays: 7,
+    },
+  ] as const;
+
+  for (const t of clubTrials) {
+    await prisma.trialCoupon.upsert({
+      where: { code: t.code },
+      create: {
+        code: t.code,
+        referenceNote: t.referenceNote,
+        maxUses: t.maxUses,
+        usedCount: 0,
+        expiryDays: t.expiryDays,
+      },
+      update: {
+        referenceNote: t.referenceNote,
+        maxUses: t.maxUses,
+        expiryDays: t.expiryDays,
+      },
+    });
+    console.log("Trial code ensured:", t.code);
+  }
 }
 
 main()

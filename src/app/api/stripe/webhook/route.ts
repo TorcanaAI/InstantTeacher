@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { HOMEWORK_SESSION_MINUTES } from "@/lib/constants";
+import { processTrialAfterSubscriptionCreated } from "@/lib/trialRedemptionWebhook";
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -56,10 +57,11 @@ export async function POST(req: Request) {
 
     const trialCouponId = raw.metadata?.trialCouponId;
     if (trialCouponId && event.type === "customer.subscription.created") {
-      await prisma.trialCoupon.updateMany({
-        where: { id: trialCouponId, usedAt: null },
-        data: { usedAt: new Date(), usedByUserId: userId },
+      const stripe = getStripe();
+      const sub = await stripe.subscriptions.retrieve(raw.id, {
+        expand: ["default_payment_method", "latest_invoice.payment_intent.payment_method"],
       });
+      await processTrialAfterSubscriptionCreated(stripe, sub, userId, trialCouponId);
     }
 
     await prisma.subscription.upsert({

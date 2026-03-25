@@ -175,6 +175,77 @@ async function main() {
       CREATE INDEX IF NOT EXISTS "TrialCoupon_usedAt_idx" ON "TrialCoupon"("usedAt");
     `);
 
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "TrialCoupon" ADD COLUMN IF NOT EXISTS "maxUses" INTEGER NOT NULL DEFAULT 1;`
+    );
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "TrialCoupon" ADD COLUMN IF NOT EXISTS "usedCount" INTEGER NOT NULL DEFAULT 0;`
+    );
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "TrialCoupon" ADD COLUMN IF NOT EXISTS "expiryDays" INTEGER NOT NULL DEFAULT 7;`
+    );
+
+    // TrialCodeRedemption (1/account, 1/card, global cap; Stripe pm_… stored)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "TrialCodeRedemption" (
+        "id" TEXT NOT NULL,
+        "trialCouponId" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
+        "paymentMethodId" TEXT NOT NULL,
+        "redeemedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "trialEndDate" TIMESTAMP(3) NOT NULL,
+        "stripeSubscriptionId" TEXT,
+        CONSTRAINT "TrialCodeRedemption_pkey" PRIMARY KEY ("id")
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "TrialCodeRedemption_stripeSubscriptionId_key"
+      ON "TrialCodeRedemption"("stripeSubscriptionId");
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "TrialCodeRedemption_trialCouponId_idx" ON "TrialCodeRedemption"("trialCouponId");
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "TrialCodeRedemption_userId_idx" ON "TrialCodeRedemption"("userId");
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "TrialCodeRedemption_paymentMethodId_idx" ON "TrialCodeRedemption"("paymentMethodId");
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "TrialCodeRedemption_trialCouponId_userId_key"
+      ON "TrialCodeRedemption"("trialCouponId", "userId");
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "TrialCodeRedemption_trialCouponId_paymentMethodId_key"
+      ON "TrialCodeRedemption"("trialCouponId", "paymentMethodId");
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'TrialCodeRedemption_trialCouponId_fkey'
+        ) THEN
+          ALTER TABLE "TrialCodeRedemption"
+          ADD CONSTRAINT "TrialCodeRedemption_trialCouponId_fkey"
+          FOREIGN KEY ("trialCouponId") REFERENCES "TrialCoupon"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        END IF;
+      END $$;
+    `);
+    await prisma.$executeRawUnsafe(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'TrialCodeRedemption_userId_fkey'
+        ) THEN
+          ALTER TABLE "TrialCodeRedemption"
+          ADD CONSTRAINT "TrialCodeRedemption_userId_fkey"
+          FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        END IF;
+      END $$;
+    `);
+
     // Note: Prisma schema has `usedByUserId` but we intentionally skip FKs here
     // because this targeted init is only about making the app usable.
 
