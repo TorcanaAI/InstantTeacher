@@ -39,6 +39,26 @@ export async function POST(req: Request) {
     const role = (session.user as { role?: Role }).role;
     const isAdmin = role === Role.ADMIN;
 
+    // Temporary free-access bypass for specific parent accounts.
+    // Configure in Vercel env vars:
+    // - `FREE_HOMEWORK_BYPASS_EMAILS` (comma-separated emails)
+    // - `FREE_HOMEWORK_BYPASS_NAMES` (comma-separated names)
+    const bypassEmails = (process.env.FREE_HOMEWORK_BYPASS_EMAILS ?? "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const bypassNames = (process.env.FREE_HOMEWORK_BYPASS_NAMES ?? "gisela,kylie")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+
+    const identityEmail = session.user.email?.trim().toLowerCase() ?? "";
+    const identityName = session.user.name?.trim().toLowerCase() ?? "";
+    const bypassPaywall =
+      role === Role.PARENT &&
+      ((identityEmail && bypassEmails.includes(identityEmail)) ||
+        (identityName && bypassNames.includes(identityName)));
+
     const parent = await prisma.parentProfile.findUnique({
       where: { userId: session.user.id },
       include: { students: true },
@@ -55,10 +75,11 @@ export async function POST(req: Request) {
     const subscription = await prisma.subscription.findUnique({
       where: { userId: requestedByUserId },
     });
-    const hasActiveSubscription =
+    let hasActiveSubscription =
       subscription?.status === "ACTIVE" &&
       subscription?.currentPeriodEnd &&
       new Date(subscription.currentPeriodEnd) > new Date();
+    if (bypassPaywall) hasActiveSubscription = true;
 
     if (hasActiveSubscription) {
       const now = new Date();
