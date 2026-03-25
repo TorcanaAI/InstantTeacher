@@ -56,7 +56,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
         const email = String(credentials.email).trim().toLowerCase();
-        const inputPassword = String(credentials.password);
+        const inputPassword = String(credentials.password).trim();
         console.log("[Auth] Login attempt email:", email);
 
         try {
