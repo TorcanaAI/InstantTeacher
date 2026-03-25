@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -14,19 +15,23 @@ type ParentRow = {
   children: Child[];
 };
 
+function loadParents(): Promise<ParentRow[]> {
+  return fetch("/api/admin/parents").then((r) => {
+    if (!r.ok) throw new Error("Failed to load parents");
+    return r.json();
+  });
+}
+
 export default function ParentsPage() {
   const [parents, setParents] = useState<ParentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch("/api/admin/parents")
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to load parents");
-        return r.json();
-      })
+    loadParents()
       .then(setParents)
       .catch(() => {
         setError("Could not load parent registrations. You may need to sign in as admin.");
@@ -34,6 +39,28 @@ export default function ParentsPage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleDelete(p: ParentRow) {
+    const ok = window.confirm(
+      `Delete parent "${p.name}" (${p.email}) and all linked student profiles? This cannot be undone.`
+    );
+    if (!ok) return;
+
+    setDeletingId(p.id);
+    setError(null);
+    try {
+      const r = await fetch(`/api/admin/parents/${encodeURIComponent(p.id)}`, { method: "DELETE" });
+      const data = (await r.json().catch(() => ({}))) as { error?: string };
+      if (!r.ok) {
+        throw new Error(data.error ?? "Delete failed");
+      }
+      setParents((prev) => prev.filter((x) => x.id !== p.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete parent.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -75,24 +102,40 @@ export default function ParentsPage() {
           ) : (
             <ul className="space-y-4">
               {parents.map((p) => (
-                <li key={p.id} className="rounded-xl border-2 border-border bg-card p-4">
-                  <div className="font-semibold text-foreground">{p.name}</div>
-                  <div className="text-sm text-muted-foreground">Email: {p.email}</div>
-                  <div className="text-sm text-muted-foreground">Phone: {p.phone ?? "—"}</div>
-                  <div className="mt-2">
-                    <strong className="text-sm">Children:</strong>
-                    <ul className="ml-6 list-disc text-sm">
-                      {p.children.length === 0 ? (
-                        <li className="text-muted-foreground">None</li>
-                      ) : (
-                        p.children.map((c) => (
-                          <li key={c.id}>
-                            {c.name} — Year {c.yearLevel}
-                          </li>
-                        ))
-                      )}
-                    </ul>
+                <li
+                  key={p.id}
+                  className="flex flex-col gap-3 rounded-xl border-2 border-border bg-card p-4 sm:flex-row sm:items-start sm:justify-between"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-foreground">{p.name}</div>
+                    <div className="text-sm text-muted-foreground">Email: {p.email}</div>
+                    <div className="text-sm text-muted-foreground">Phone: {p.phone ?? "—"}</div>
+                    <div className="mt-2">
+                      <strong className="text-sm">Children:</strong>
+                      <ul className="ml-6 list-disc text-sm">
+                        {p.children.length === 0 ? (
+                          <li className="text-muted-foreground">None</li>
+                        ) : (
+                          p.children.map((c) => (
+                            <li key={c.id}>
+                              {c.name} — Year {c.yearLevel}
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    </div>
                   </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={deletingId !== null}
+                    onClick={() => handleDelete(p)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {deletingId === p.id ? "Deleting…" : "Delete"}
+                  </Button>
                 </li>
               ))}
             </ul>

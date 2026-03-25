@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
+import { Role } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-/** GET: list all parent registrations with their children (admin only). */
+/** GET: list all parent registrations with their children (admin only). Excludes ADMIN accounts. */
 export async function GET() {
   try {
     await requireAdmin();
@@ -13,6 +14,7 @@ export async function GET() {
   }
 
   const parents = await prisma.parentProfile.findMany({
+    where: { user: { role: Role.PARENT } },
     include: {
       user: true,
       students: true,
