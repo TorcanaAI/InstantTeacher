@@ -55,50 +55,55 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           console.log("[Auth] Login attempt: email or password missing");
           return null;
         }
-        const email = (credentials.email as string).trim().toLowerCase();
-        const inputPassword = credentials.password as string;
+        const email = String(credentials.email).trim().toLowerCase();
+        const inputPassword = String(credentials.password);
         console.log("[Auth] Login attempt email:", email);
 
-        let user = await prisma.user.findUnique({
-          where: { email },
-        });
-        if (!user) {
-          try {
-            user = await prisma.user.findFirst({
-              where: { email: { equals: email, mode: "insensitive" } },
-            });
-          } catch {
-            // mode: "insensitive" may not be supported in some Postgres setups; ignore
+        try {
+          let user = await prisma.user.findUnique({
+            where: { email },
+          });
+          if (!user) {
+            try {
+              user = await prisma.user.findFirst({
+                where: { email: { equals: email, mode: "insensitive" } },
+              });
+            } catch {
+              // mode: "insensitive" may not be supported in some Postgres setups; ignore
+            }
           }
-        }
-        if (!user) {
-          console.log("[Auth] User found: no");
+          if (!user) {
+            console.log("[Auth] User found: no");
+            return null;
+          }
+          console.log("[Auth] User found: yes, id:", user.id);
+          console.log("[Auth] PasswordHash exists:", !!user.passwordHash);
+          if (!user.passwordHash) {
+            console.log("[Auth] Login failed: no password set for user");
+            return null;
+          }
+          if (user.banned) {
+            console.log("[Auth] User banned");
+            return null;
+          }
+          const bcrypt = (await import("bcryptjs")).default;
+          const valid = await bcrypt.compare(inputPassword, user.passwordHash);
+          console.log("[Auth] Password match:", valid);
+          console.log("[Auth] Role:", user.role);
+          if (!valid) {
+            return null;
+          }
+          return {
+            id: user.id,
+            email: user.email ?? email,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+          };
+        } catch (err) {
+          console.error("[Auth] authorize() database error:", err);
           return null;
         }
-        console.log("[Auth] User found: yes, id:", user.id);
-        console.log("[Auth] PasswordHash exists:", !!user.passwordHash);
-        if (!user.passwordHash) {
-          console.log("[Auth] Login failed: no password set for user");
-          return null;
-        }
-        if (user.banned) {
-          console.log("[Auth] User banned");
-          return null;
-        }
-        const bcrypt = (await import("bcryptjs")).default;
-        const valid = await bcrypt.compare(inputPassword, user.passwordHash);
-        console.log("[Auth] Password match:", valid);
-        console.log("[Auth] Role:", user.role);
-        if (!valid) {
-          return null;
-        }
-        return {
-          id: user.id,
-          email: user.email ?? email,
-          name: user.name,
-          image: user.image,
-          role: user.role,
-        };
       },
     }),
   ],

@@ -7,7 +7,13 @@
  * Instead, we create only the tables/enums required by the app's Homework + Admin
  * dashboard if they're missing.
  */
+import { execSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.join(__dirname, "..");
 
 const shouldInit = process.env.VERCEL === "1" || process.env.RUN_DB_PUSH === "1";
 
@@ -299,6 +305,15 @@ async function main() {
     `);
 
     console.log("[build] DB init complete.");
+
+    // Keep admin, trial codes, and seeded parent accounts in sync with Vercel's DATABASE_URL.
+    console.log("[build] Running database seed…");
+    execSync("npm run db:seed", {
+      cwd: projectRoot,
+      stdio: "inherit",
+      env: process.env,
+    });
+    console.log("[build] Seed complete.");
   } finally {
     await prisma.$disconnect();
   }
