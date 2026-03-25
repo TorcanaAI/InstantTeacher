@@ -7,6 +7,78 @@ const ADMIN_EMAIL = "support@torcanaai.com";
 const ADMIN_PASSWORD = "SouthAfrica91!";
 const BCRYPT_ROUNDS = 12;
 
+type BootstrapParent = { email: string; password: string; name: string };
+
+function bootstrapParentsFromEnv(): BootstrapParent[] {
+  const raw = process.env.BOOTSTRAP_PARENT_ACCOUNTS?.trim();
+  if (!raw) return [];
+  try {
+    const data = JSON.parse(raw) as unknown;
+    if (!Array.isArray(data)) {
+      console.error("[seed] BOOTSTRAP_PARENT_ACCOUNTS must be a JSON array; skipping.");
+      return [];
+    }
+    const out: BootstrapParent[] = [];
+    for (const item of data) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      if (typeof o.email !== "string" || typeof o.password !== "string") continue;
+      const email = o.email.trim();
+      const password = o.password;
+      const name =
+        typeof o.name === "string" && o.name.trim()
+          ? o.name.trim()
+          : email.split("@")[0] || "Parent";
+      out.push({ email, password, name });
+    }
+    return out;
+  } catch {
+    console.error("[seed] BOOTSTRAP_PARENT_ACCOUNTS JSON parse failed; skipping.");
+    return [];
+  }
+}
+
+async function ensureParentUser(prisma: PrismaClient, p: BootstrapParent) {
+  const email = p.email.trim().toLowerCase();
+  const hash = await bcrypt.hash(p.password, BCRYPT_ROUNDS);
+  let user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    });
+  }
+  if (user) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { email, name: p.name, role: Role.PARENT, passwordHash: hash, banned: false },
+    });
+    console.log("Parent user updated:", email);
+  } else {
+    user = await prisma.user.create({
+      data: {
+        email,
+        name: p.name,
+        role: Role.PARENT,
+        passwordHash: hash,
+      },
+    });
+    console.log("Parent user created:", email);
+  }
+
+  const profile = await prisma.parentProfile.findUnique({ where: { userId: user.id } });
+  if (!profile) {
+    await prisma.parentProfile.create({
+      data: {
+        userId: user.id,
+        fullName: p.name,
+        mobile: "0400000000",
+        suburb: "Perth",
+      },
+    });
+    console.log("Parent profile created for:", email);
+  }
+}
+
 async function main() {
   const adminEmail = (process.env.ADMIN_EMAIL ?? ADMIN_EMAIL).trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD ?? ADMIN_PASSWORD;
@@ -76,6 +148,34 @@ async function main() {
     console.log("Test Student (Sunshine) created for admin testing");
   } else {
     console.log("Test Student (Sunshine) already exists");
+  }
+
+  /** Always PARENT + these credentials; re-run seed to repair password/role. */
+  const permanentParents = [
+    {
+      email: "kyliekritzinger@gmail.com",
+      password: process.env.SEED_KYLIE_PASSWORD ?? "Kylie1",
+      name: "Kylie Kritzinger",
+    },
+    {
+      email: "giselavanrenen@gmail.com",
+      password: process.env.SEED_GISELA_PASSWORD ?? "Gisela1",
+      name: "Gisela Van Renen",
+    },
+  ] as const;
+
+  for (const p of permanentParents) {
+    await ensureParentUser(prisma, {
+      email: p.email,
+      password: p.password,
+      name: p.name,
+    });
+  }
+
+  // Optional: Vercel / CI — set BOOTSTRAP_PARENT_ACCOUNTS (JSON array) to force passwords into DB on deploy.
+  for (const p of bootstrapParentsFromEnv()) {
+    await ensureParentUser(prisma, p);
+    console.log("Bootstrap parent ensured (from env):", p.email.trim().toLowerCase());
   }
 
   const clubTrials = [
