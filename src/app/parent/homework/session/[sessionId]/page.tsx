@@ -42,6 +42,7 @@ export default function HomeworkSessionPage() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const lastAutoSpokenMessageIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -97,6 +98,8 @@ export default function HomeworkSessionPage() {
     if (sending || status !== "ACTIVE") return;
     setSending(true);
     try {
+      // Capture assistant type for this message so TTS uses the correct voice.
+      const currentAssistantType = assistantType;
       const res = await fetch(`/api/homework/session/${sessionId}/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,6 +122,14 @@ export default function HomeworkSessionPage() {
       ]);
       setInput("");
       if (panic) setPanicSent(true);
+
+      // Auto-play TTS for assistant replies so both Sunshine and Jack speak.
+      // (Manual "Play" button remains available below.)
+      if (data?.message?.id && lastAutoSpokenMessageIdRef.current !== data.message.id) {
+        lastAutoSpokenMessageIdRef.current = data.message.id;
+        void playSpeech(data.message.content, currentAssistantType);
+      }
+
       // Defer refetch so the UI can paint the new messages first (doesn't block send latency).
       queueMicrotask(() => {
         void fetchSession();
@@ -194,12 +205,12 @@ export default function HomeworkSessionPage() {
     recognition.start();
   }
 
-  async function playSpeech(text: string) {
+  async function playSpeech(text: string, assistant: "SUNSHINE" | "JACK") {
     try {
       const res = await fetch("/api/assistant/speak", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, assistant: assistantType }),
+        body: JSON.stringify({ text, assistant }),
       });
       if (!res.ok) return;
       const blob = await res.blob();
@@ -299,7 +310,7 @@ export default function HomeworkSessionPage() {
                 {m.role === "ASSISTANT" && (
                   <button
                     type="button"
-                    onClick={() => playSpeech(m.content)}
+                    onClick={() => playSpeech(m.content, assistantType)}
                     className="mt-2 flex items-center gap-1 text-xs opacity-80 hover:opacity-100"
                   >
                     <Volume2 className="h-3 w-3" /> Play
